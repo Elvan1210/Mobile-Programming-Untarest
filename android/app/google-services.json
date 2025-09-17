@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "626076073153",
+    "project_id": "untarest-firebase-app",
+    "storage_bucket": "untarest-firebase-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:626076073153:android:44fb9348aa9b867c432840",
+        "android_client_info": {
+          "package_name": "com.example.untarest_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAFOHUGbpGMP2iBfY7TgLoNlHOu49DeCQ8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
