@@ -3,6 +3,7 @@ import 'package:untarest_app/screens/home/home_page.dart';
 import 'package:untarest_app/services/auth_service.dart';
 import 'package:untarest_app/utils/custom_widgets.dart';
 import 'package:untarest_app/utils/constants.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class FacultySelectionPage extends StatefulWidget {
   final String email;
@@ -38,20 +39,38 @@ class _FacultySelectionPageState extends State<FacultySelectionPage> {
       return;
     }
     
-    final user = await _authService.registerWithEmailAndPassword(
-      widget.email,
-      widget.password,
-    );
-    if (user != null && mounted) {
-      // Logic for saving user data including faculty to Firestore/Database
-      // For now, we'll just navigate to the homepage.
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const HomePage()),
+    // Gunakan try-catch untuk menangkap error spesifik dari Firebase
+    try {
+      final user = await _authService.registerWithEmailAndPassword(
+        widget.email,
+        widget.password,
       );
-    } else {
+      
+      if (user != null && mounted) {
+        // Logika untuk menyimpan data user ke Firestore (jika ada)
+        // ... (misalnya: menambahkan fakultas ke profil user di database)
+        
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomePage()),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      String message = 'Registration failed. Please try again.';
+      if (e.code == 'email-already-in-use') {
+        message = 'The email address is already in use by another account.';
+      } else if (e.code == 'weak-password') {
+        message = 'The password provided is too weak.';
+      } else if (e.code == 'invalid-email') {
+        message = 'The email address is not valid.';
+      }
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Registration failed. Try again.')),
+        SnackBar(content: Text(message)),
+      );
+    } catch (e) {
+      // Catch all other generic errors
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('An unexpected error occurred.')),
       );
     }
   }
