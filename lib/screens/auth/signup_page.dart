@@ -17,7 +17,23 @@ class _SignupPageState extends State<SignupPage> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
-  void _navigateToFacultySelection() {
+  void _validateAndNavigate() {
+    // Validasi input di sini
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Email and password cannot be empty.')),
+      );
+      return;
+    }
+
+    if (_passwordController.text != _confirmPasswordController.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Passwords do not match.')),
+      );
+      return;
+    }
+
+    // Navigasi ke halaman pemilihan fakultas jika validasi berhasil
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -69,7 +85,8 @@ class _SignupPageState extends State<SignupPage> {
               ),
               CustomButton(
                 text: 'Sign Up',
-                onPressed: _navigateToFacultySelection,
+                // Ganti onPressed ke fungsi validasi yang baru
+                onPressed: _validateAndNavigate, 
               ),
               const SizedBox(height: 20),
               TextButton(
