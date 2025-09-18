@@ -10,10 +10,10 @@ class FacultySelectionPage extends StatefulWidget {
   final String password;
 
   const FacultySelectionPage({
-    Key? key,
+    super.key,
     required this.email,
     required this.password,
-  }) : super(key: key);
+  });
 
   @override
   State<FacultySelectionPage> createState() => _FacultySelectionPageState();

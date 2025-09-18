@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:untarest_app/utils/constants.dart';
 
 class ProfilePage extends StatelessWidget {
-  const ProfilePage({Key? key}) : super(key: key);
+  const ProfilePage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -107,8 +107,8 @@ class _PhotoCard extends StatelessWidget {
     required this.imageUrl,
     required this.title,
     required this.description,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {

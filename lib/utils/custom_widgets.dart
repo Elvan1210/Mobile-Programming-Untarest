@@ -8,12 +8,12 @@ class CustomTextField extends StatelessWidget {
   final IconData? icon;
 
   const CustomTextField({
-    Key? key,
+    super.key,
     required this.hintText,
     this.obscureText = false,
     required this.controller,
     this.icon,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -45,11 +45,11 @@ class CustomButton extends StatelessWidget {
   final Color color;
 
   const CustomButton({
-    Key? key,
+    super.key,
     required this.text,
     required this.onPressed,
     this.color = primaryColor,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
