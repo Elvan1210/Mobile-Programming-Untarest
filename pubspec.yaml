@@ -30,6 +30,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_staggered_grid_view: ^0.7.0
   firebase_core: ^4.1.0
   firebase_auth: ^6.0.2
   flutter_svg: ^2.2.0
@@ -63,6 +64,7 @@ flutter:
   assets:
     - assets/images/
     - assets/fonts/
+    - assets/dummy_news/news.json
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
