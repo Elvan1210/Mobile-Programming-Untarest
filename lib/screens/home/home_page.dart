@@ -118,8 +118,21 @@ class _HomePageState extends State<HomePage> {
         type: BottomNavigationBarType.fixed,
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+        items: [
+          BottomNavigationBarItem(
+            icon: SvgPicture.asset(
+              'assets/images/logo_TrendBottomNav.svg',
+              width: 24,
+              height: 24,
+            ),
+            activeIcon: SvgPicture.asset(
+              'assets/images/logo_TrendBottomNav.svg',
+              width: 28,
+              height: 28,
+              color: Color.fromARGB(255, 2, 0, 143),
+            ),
+            label: 'Home',
+          ),
           BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
           BottomNavigationBarItem(
             icon: Icon(Icons.add_circle_outline),
