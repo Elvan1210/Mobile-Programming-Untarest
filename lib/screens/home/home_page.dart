@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:untarest_app/models/search_news.dart';
 import 'package:untarest_app/screens/home/search_features.dart';
+import 'package:untarest_app/services/search_service.dart';
 import 'package:untarest_app/utils/constants.dart';
 
 class HomePage extends StatefulWidget {
@@ -22,7 +25,6 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      //biar AppBar transparan tapi nggak ketiban body
       extendBodyBehindAppBar: false,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -53,14 +55,15 @@ class _HomePageState extends State<HomePage> {
               );
             },
             icon: SizedBox(
-              width: 40, //gedein ukuran biar gmpg click
+              width: 40,
               height: 40,
               child: Center(
                 child: SvgPicture.asset(
                   'assets/images/logo_Search.svg',
                   width: 24,
                   height: 24,
-                  color: Colors.black,
+                  colorFilter:
+                      const ColorFilter.mode(Colors.black, BlendMode.srcIn),
                 ),
               ),
             ),
@@ -77,40 +80,46 @@ class _HomePageState extends State<HomePage> {
               fit: BoxFit.cover,
             ),
           ),
-          child: Column(
-            children: [
-              const SizedBox(height: 10),
-              Expanded(
-                child: GridView.count(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                const SizedBox(height: 10),
+                const _TrendingVibesSection(),
+                const SizedBox(height: 20),
+                Padding(
                   padding: const EdgeInsets.all(16),
-                  children: const [
-                    _PhotoCard(
-                      imageUrl: 'https://via.placeholder.com/150',
-                      title: 'PREZIDEN UNTAR',
-                      description: 'Joget di sidang senat naik..',
-                    ),
-                    _PhotoCard(
-                      imageUrl: 'https://via.placeholder.com/150',
-                      title: 'UNTAREST',
-                      description: 'Guru dan dosen..',
-                    ),
-                    _PhotoCard(
-                      imageUrl: 'https://via.placeholder.com/150',
-                      title: 'HIMTI UNTAR',
-                      description: 'HIMTI UNTAR..',
-                    ),
-                    _PhotoCard(
-                      imageUrl: 'https://via.placeholder.com/150',
-                      title: 'UNTAR CUP',
-                      description: 'Futsal..',
-                    ),
-                  ],
+                  child: GridView.count(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    children: const [
+                      _PhotoCard(
+                        imageUrl: 'assets/images/img1_dummy.png',
+                        title: 'PREZIDEN UNTAR',
+                        description: 'Joget di sidang senat naik..',
+                      ),
+                      _PhotoCard(
+                        imageUrl: 'assets/images/img2_dummy.png',
+                        title: 'UNTAREST',
+                        description: 'Guru dan dosen..',
+                      ),
+                      _PhotoCard(
+                        imageUrl: 'assets/images/img3_dummy.png',
+                        title: 'HIMTI UNTAR',
+                        description: 'HIMTI UNTAR..',
+                      ),
+                      _PhotoCard(
+                        imageUrl: 'assets/images/img4_dummy.png',
+                        title: 'UNTAR CUP',
+                        description: 'Futsal..',
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -124,21 +133,25 @@ class _HomePageState extends State<HomePage> {
               'assets/images/logo_TrendBottomNav.svg',
               width: 24,
               height: 24,
+              colorFilter: const ColorFilter.mode(Colors.grey, BlendMode.srcIn),
             ),
             activeIcon: SvgPicture.asset(
               'assets/images/logo_TrendBottomNav.svg',
               width: 28,
               height: 28,
-              color: Color.fromARGB(255, 2, 0, 143),
+              colorFilter:
+                  const ColorFilter.mode(primaryColor, BlendMode.srcIn),
             ),
             label: 'Home',
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
+              icon: Icon(Icons.search), label: 'Search'),
+          const BottomNavigationBarItem(
             icon: Icon(Icons.add_circle_outline),
             label: 'Create',
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+          const BottomNavigationBarItem(
+              icon: Icon(Icons.person), label: 'Profile'),
         ],
         selectedItemColor: primaryColor,
         unselectedItemColor: Colors.grey,
@@ -171,7 +184,7 @@ class _PhotoCard extends StatelessWidget {
           Expanded(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(10),
-              child: Image.network(imageUrl, fit: BoxFit.cover),
+              child: Image.asset(imageUrl, fit: BoxFit.cover),
             ),
           ),
           Padding(
@@ -194,6 +207,122 @@ class _PhotoCard extends StatelessWidget {
                 fontSize: 12,
                 color: Colors.grey,
               ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TrendingVibesSection extends StatelessWidget {
+  const _TrendingVibesSection({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Trending Vibes ✨",
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: primaryColor,
+              fontFamily: 'Poppins',
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 120,
+            child: FutureBuilder<List<NewsArticle>>(
+              future: loadDummyNews(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                } else if (snapshot.hasError) {
+                  return const Center(child: Text("Gagal memuat trend."));
+                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(child: Text("Tidak ada trend saat ini."));
+                } else {
+                  return ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: snapshot.data!.length,
+                    itemBuilder: (context, index) {
+                      final article = snapshot.data![index];
+                      return _TrendingCard(article: article);
+                    },
+                  );
+                }
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TrendingCard extends StatelessWidget {
+  final NewsArticle article;
+
+  const _TrendingCard({required this.article});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 200,
+      margin: const EdgeInsets.only(right: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.2),
+            spreadRadius: 1,
+            blurRadius: 5,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 500),
+                child: article.urlToImage.isNotEmpty
+                    ? Image.asset(
+                        article.urlToImage,
+                        key: ValueKey(article.urlToImage),
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                      )
+                    : Container(
+                        key: const ValueKey('placeholder'),
+                        color: Colors.grey[200],
+                        child: const Center(
+                          child: Icon(Icons.image_not_supported,
+                              size: 50, color: Colors.grey),
+                        ),
+                      ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              article.title,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+                fontFamily: "Poppins",
+              ),
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
           ),
