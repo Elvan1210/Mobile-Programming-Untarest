@@ -10,11 +10,7 @@ class SearchService {
 
   Future<List<NewsArticle>> searchNews(String query) async {
     if (dummyNews) {
-      final jsonString =
-          await rootBundle.loadString("assets/dummy_news/news.json");
-      final data = json.decode(jsonString);
-      final List articles = data['articles'];
-      return articles.map((json) => NewsArticle.fromJson(json)).toList();
+      return await loadDummyNews();
     }
 
     //ini untuk kalau pake API News yg asli,bkn dummy
@@ -37,10 +33,37 @@ class SearchService {
   }
 }
 
+Future<List<NewsArticle>> loadDummyNews() async {
+  // Data dummy yang sudah disesuaikan dengan nama file gambar Anda.
+  final List<Map<String, dynamic>> dummyData = [
+    {
+      "title": "PREZIDEN UNTAR",
+      "description": "Joget di sidang senat naik..",
+      "image": "assets/images/img1_dummy.png"
+    },
+    {
+      "title": "IT Girl Average Behaviour",
+      "description": "IVE: Jang Won Young viral karena makan stroberi lucu",
+      "image": "assets/images/img2_dummy.png"
+    },
+    {
+      "title": "Naik Gaji Uhuy!",
+      "description": "Indonesia: ... naik gaji 3 juta per hari",
+      "image": "assets/images/img3_dummy.png"
+    },
+    {
+      "title": "TBBT's Bernadette And Amy",
+      "description": "Sistem pertemanan Bernadette dan Amy yang..",
+      "image": "assets/images/img4_dummy.png"
+    }
+  ];
 
-Future<List<NewsArticle>> loadDummyNews() async{
-  final String response = await rootBundle.loadString('assets/dummy_news/news.json');
-  final data = jsonDecode(response);
-  final List articles = data['articles'];
-  return articles.map((e)=> NewsArticle.fromJson(e)).toList();
+  return dummyData.map((json) {
+    return NewsArticle(
+      title: json['title']!,
+      description: json['description']!,
+      urlToImage: json['image']!,
+      url: ""
+    );
+  }).toList();
 }
