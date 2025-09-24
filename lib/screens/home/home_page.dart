@@ -5,6 +5,7 @@ import 'package:untarest_app/models/search_news.dart';
 import 'package:untarest_app/screens/home/search_features.dart';
 import 'package:untarest_app/services/search_service.dart';
 import 'package:untarest_app/utils/constants.dart';
+import 'package:untarest_app/screens/profile/profile.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -20,6 +21,12 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       _selectedIndex = index;
     });
+    if (index == 3) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const ProfilePage()),
+      );
+    }
   }
 
   @override
@@ -292,7 +299,8 @@ class _TrendingCard extends StatelessWidget {
         children: [
           Expanded(
             child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(12)),
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 500),
                 child: article.urlToImage.isNotEmpty
