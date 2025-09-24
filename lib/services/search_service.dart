@@ -1,29 +1,38 @@
 import 'dart:convert';
-import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
+import 'package:flutter/services.dart' show rootBundle;
 import '../models/search_news.dart';
 
+
 class SearchService {
+  final String _apiKey = '0702315d93b4449da653d0ea0531bfef';
+
   Future<List<NewsArticle>> searchNews(String query,
       {String region = "all"}) async {
+    // Load dummy news
     final String jsonString =
         await rootBundle.loadString('assets/dummy_news/news.json');
     final Map<String, dynamic> data = json.decode(jsonString);
     final List articles = data['articles'] ?? [];
-    // Filter by query and optionally by region (if you add region field)
     return articles.map((json) => NewsArticle.fromJson(json)).where((article) {
       final matchesQuery = query.isEmpty ||
-          article.title.toLowerCase().contains(query.toLowerCase()) ||
-          article.description.toLowerCase().contains(query.toLowerCase());
-      // If you add region field, filter here
-      return matchesQuery;
+          (article.content.toLowerCase().contains(query.toLowerCase()));
+      final matchesRegion = region == "all" ||
+          (article.region?.toLowerCase() == region.toLowerCase());
+      return matchesQuery && matchesRegion;
     }).toList();
   }
-}
 
-Future<List<NewsArticle>> loadDummyNews() async {
-  final String jsonString =
-      await rootBundle.loadString('assets/dummy_news/news.json');
-  final Map<String, dynamic> data = json.decode(jsonString);
-  final List articles = data['articles'] ?? [];
-  return articles.map((json) => NewsArticle.fromJson(json)).toList();
+  String _regionToCountry(String region) {
+    switch (region.toLowerCase()) {
+      case 'indonesia':
+        return 'id';
+      case 'usa':
+        return 'us';
+      case 'world':
+      case 'all':
+      default:
+        return 'id'; // Default to Indonesia
+    }
+  }
 }

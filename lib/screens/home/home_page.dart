@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:untarest_app/models/search_news.dart';
 import 'package:untarest_app/screens/home/search_features.dart';
@@ -331,19 +330,12 @@ class _TrendingCard extends StatelessWidget {
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 500),
                 child: article.urlToImage.isNotEmpty
-                    ? Image.network(
-                        article.urlToImage,
-                        key: ValueKey(article.urlToImage),
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                      )
+                    ? (isNetworkImage(article.urlToImage)
+                        ? Image.network(article.urlToImage, fit: BoxFit.cover)
+                        : Image.asset(article.urlToImage, fit: BoxFit.cover))
                     : Container(
-                        key: const ValueKey('placeholder'),
-                        color: Colors.grey[200],
-                        child: const Center(
-                          child: Icon(Icons.image_not_supported,
-                              size: 50, color: Colors.grey),
-                        ),
+                        color: Colors.grey[300],
+                        child: const Icon(Icons.image, size: 40),
                       ),
               ),
             ),
@@ -351,7 +343,7 @@ class _TrendingCard extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Text(
-              article.title,
+              article.content,
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 12,
@@ -365,4 +357,25 @@ class _TrendingCard extends StatelessWidget {
       ),
     );
   }
+}
+
+// Trending Vibes Widget
+Widget trendingVibes(List<NewsArticle> articles) {
+  final trending = articles.where((a) => a.isTrending == true).take(4).toList();
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text("TRENDING VIBES!",
+          style: TextStyle(
+              fontWeight: FontWeight.bold, fontSize: 18, color: Colors.red)),
+      ...trending.map((article) => ListTile(
+            leading: article.urlToImage.isNotEmpty
+                ? Image.asset(article.urlToImage,
+                    width: 40, height: 40, fit: BoxFit.cover)
+                : Icon(Icons.trending_up),
+            title: Text(article.content),
+            subtitle: Text(article.content),
+          )),
+    ],
+  );
 }
