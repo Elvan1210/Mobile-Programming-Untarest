@@ -223,8 +223,16 @@ class _PhotoCard extends StatelessWidget {
   }
 }
 
-class _TrendingVibesSection extends StatelessWidget {
+class _TrendingVibesSection extends StatefulWidget {
   const _TrendingVibesSection({super.key});
+
+  @override
+  State<_TrendingVibesSection> createState() => _TrendingVibesSectionState();
+}
+
+class _TrendingVibesSectionState extends State<_TrendingVibesSection> {
+  String selectedRegion = "all";
+  final List<String> regions = ["all", "Indonesia", "World"];
 
   @override
   Widget build(BuildContext context) {
@@ -233,20 +241,39 @@ class _TrendingVibesSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Trending Vibes ✨",
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: primaryColor,
-              fontFamily: 'Poppins',
-            ),
+          Row(
+            children: [
+              const Text(
+                "Trending Vibes ✨",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: primaryColor,
+                  fontFamily: 'Poppins',
+                ),
+              ),
+              const SizedBox(width: 10),
+              DropdownButton<String>(
+                value: selectedRegion,
+                items: regions
+                    .map((r) => DropdownMenuItem(
+                          value: r,
+                          child: Text(r),
+                        ))
+                    .toList(),
+                onChanged: (val) {
+                  setState(() {
+                    selectedRegion = val ?? "all";
+                  });
+                },
+              ),
+            ],
           ),
           const SizedBox(height: 10),
           SizedBox(
             height: 120,
             child: FutureBuilder<List<NewsArticle>>(
-              future: loadDummyNews(),
+              future: SearchService().searchNews("", region: selectedRegion),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -304,7 +331,7 @@ class _TrendingCard extends StatelessWidget {
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 500),
                 child: article.urlToImage.isNotEmpty
-                    ? Image.asset(
+                    ? Image.network(
                         article.urlToImage,
                         key: ValueKey(article.urlToImage),
                         fit: BoxFit.cover,

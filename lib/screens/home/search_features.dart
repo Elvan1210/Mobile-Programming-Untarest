@@ -19,35 +19,30 @@ class _SearchFeaturesState extends State<SearchFeatures> {
 
   List<NewsArticle> results = [];
   bool _isLoading = false;
-  bool useApi = false; // Pake dummy dulu biar gk boros API request
 
   void _searchNews(String query) async {
-    if (query.isEmpty) return;
-
     setState(() => _isLoading = true);
-
     try {
-      if (useApi) {
-        final data = await _service.searchNews(query);
-        debugPrint("Articles loaded: ${data.length}");
-        setState(() => results = data);
-      } else {
-        // dummy
-        final dummyNews = await loadDummyNews();
-        setState(() => results = dummyNews);
-      }
+      final data = await _service.searchNews(query);
+      setState(() => results = data);
     } catch (e) {
-      debugPrint("Error: $e");
+      setState(() => results = []);
     } finally {
       setState(() => _isLoading = false);
     }
   }
 
   @override
+  void initState() {
+    super.initState();
+    _searchNews(""); // Show all news initially
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: false, //hilangin tombol back
+        automaticallyImplyLeading: false,
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Container(
@@ -57,16 +52,17 @@ class _SearchFeaturesState extends State<SearchFeatures> {
           ),
           child: TextField(
             controller: _controller,
-            onSubmitted: _searchNews, //panggil API ketika user enter query
-            style: const TextStyle(fontFamily: "Poppins"), // font di input
+            onSubmitted: _searchNews,
+            onChanged: (q) {
+              if (q.isEmpty) _searchNews("");
+            },
+            style: const TextStyle(fontFamily: "Poppins"),
             decoration: InputDecoration(
               hintText: "Untarian let's search for your daily new vibes!",
               hintStyle: const TextStyle(fontFamily: "Poppins"),
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 12,
-              ),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               prefixIcon: Padding(
                 padding: const EdgeInsets.all(10.0),
                 child: SvgPicture.asset(
@@ -99,7 +95,7 @@ class _SearchFeaturesState extends State<SearchFeatures> {
                     ),
                   )
                 : MasonryGridView.count(
-                    crossAxisCount: 2, // jumlah kolom
+                    crossAxisCount: 2,
                     mainAxisSpacing: 10,
                     crossAxisSpacing: 10,
                     padding: const EdgeInsets.all(10),
@@ -122,7 +118,6 @@ class _SearchFeaturesState extends State<SearchFeatures> {
                           borderRadius: BorderRadius.circular(12),
                           child: Stack(
                             children: [
-                              // thumbnail gambar
                               article.urlToImage.isNotEmpty
                                   ? Image.network(
                                       article.urlToImage,
@@ -134,8 +129,6 @@ class _SearchFeaturesState extends State<SearchFeatures> {
                                       child:
                                           const Icon(Icons.article, size: 40),
                                     ),
-
-                              // overlay judul di bawah
                               Positioned(
                                 bottom: 0,
                                 left: 0,
@@ -164,21 +157,14 @@ class _SearchFeaturesState extends State<SearchFeatures> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
-        currentIndex: 1, // posisi di Search
+        currentIndex: 1,
         onTap: (i) {
           if (i == 0) {
-            //kalau tap home
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const HomePage()),
-            );
-          } else {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (_) => const HomePage()),
             );
           }
-          //kalau mau tambah navigasi lain silahkan, misal profile/ create post dll.
         },
         items: [
           BottomNavigationBarItem(
