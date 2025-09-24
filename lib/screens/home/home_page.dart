@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:untarest_app/models/search_news.dart';
 import 'package:untarest_app/screens/home/search_features.dart';
@@ -223,8 +222,16 @@ class _PhotoCard extends StatelessWidget {
   }
 }
 
-class _TrendingVibesSection extends StatelessWidget {
+class _TrendingVibesSection extends StatefulWidget {
   const _TrendingVibesSection({super.key});
+
+  @override
+  State<_TrendingVibesSection> createState() => _TrendingVibesSectionState();
+}
+
+class _TrendingVibesSectionState extends State<_TrendingVibesSection> {
+  String selectedRegion = "all";
+  final List<String> regions = ["all", "Indonesia", "World"];
 
   @override
   Widget build(BuildContext context) {
@@ -233,20 +240,39 @@ class _TrendingVibesSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Trending Vibes ✨",
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: primaryColor,
-              fontFamily: 'Poppins',
-            ),
+          Row(
+            children: [
+              const Text(
+                "Trending Vibes ✨",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: primaryColor,
+                  fontFamily: 'Poppins',
+                ),
+              ),
+              const SizedBox(width: 10),
+              DropdownButton<String>(
+                value: selectedRegion,
+                items: regions
+                    .map((r) => DropdownMenuItem(
+                          value: r,
+                          child: Text(r),
+                        ))
+                    .toList(),
+                onChanged: (val) {
+                  setState(() {
+                    selectedRegion = val ?? "all";
+                  });
+                },
+              ),
+            ],
           ),
           const SizedBox(height: 10),
           SizedBox(
             height: 120,
             child: FutureBuilder<List<NewsArticle>>(
-              future: loadDummyNews(),
+              future: SearchService().searchNews("", region: selectedRegion),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
@@ -304,19 +330,12 @@ class _TrendingCard extends StatelessWidget {
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 500),
                 child: article.urlToImage.isNotEmpty
-                    ? Image.asset(
-                        article.urlToImage,
-                        key: ValueKey(article.urlToImage),
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                      )
+                    ? (isNetworkImage(article.urlToImage)
+                        ? Image.network(article.urlToImage, fit: BoxFit.cover)
+                        : Image.asset(article.urlToImage, fit: BoxFit.cover))
                     : Container(
-                        key: const ValueKey('placeholder'),
-                        color: Colors.grey[200],
-                        child: const Center(
-                          child: Icon(Icons.image_not_supported,
-                              size: 50, color: Colors.grey),
-                        ),
+                        color: Colors.grey[300],
+                        child: const Icon(Icons.image, size: 40),
                       ),
               ),
             ),
@@ -324,7 +343,7 @@ class _TrendingCard extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Text(
-              article.title,
+              article.content,
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 12,
@@ -338,4 +357,25 @@ class _TrendingCard extends StatelessWidget {
       ),
     );
   }
+}
+
+// Trending Vibes Widget
+Widget trendingVibes(List<NewsArticle> articles) {
+  final trending = articles.where((a) => a.isTrending == true).take(4).toList();
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text("TRENDING VIBES!",
+          style: TextStyle(
+              fontWeight: FontWeight.bold, fontSize: 18, color: Colors.red)),
+      ...trending.map((article) => ListTile(
+            leading: article.urlToImage.isNotEmpty
+                ? Image.asset(article.urlToImage,
+                    width: 40, height: 40, fit: BoxFit.cover)
+                : Icon(Icons.trending_up),
+            title: Text(article.content),
+            subtitle: Text(article.content),
+          )),
+    ],
+  );
 }

@@ -65,6 +65,7 @@ flutter:
     - assets/images/
     - assets/fonts/
     - assets/dummy_news/news.json
+    - assets/local_meme_photos/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

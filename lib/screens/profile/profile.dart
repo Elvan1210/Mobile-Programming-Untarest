@@ -70,7 +70,8 @@ class _ProfilePageState extends State<ProfilePage> {
                                 height: 120,
                               ),
                             )
-                          : const Icon(Icons.person, size: 60, color: Colors.white),
+                          : const Icon(Icons.person,
+                              size: 60, color: Colors.white),
                     ),
                     const SizedBox(height: 10),
                     Text(
@@ -131,8 +132,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                             const SizedBox(height: 10),
                             ElevatedButton(
-                              onPressed: () {
-                              },
+                              onPressed: () {},
                               child: const Text('Upload feeds'),
                             ),
                           ],
