@@ -331,7 +331,16 @@ class _TrendingCard extends StatelessWidget {
                 duration: const Duration(milliseconds: 500),
                 child: article.urlToImage.isNotEmpty
                     ? (isNetworkImage(article.urlToImage)
-                        ? Image.network(article.urlToImage, fit: BoxFit.cover)
+                        ? Image.network(
+                            article.urlToImage,
+                            fit: BoxFit.cover,
+                            headers: {
+                              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                            },
+                            errorBuilder: (context, error, stackTrace) {
+                              return const Icon(Icons.broken_image, size: 50, color: Colors.grey);
+                            },
+                          )
                         : Image.asset(article.urlToImage, fit: BoxFit.cover))
                     : Container(
                         color: Colors.grey[300],
