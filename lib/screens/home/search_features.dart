@@ -174,6 +174,12 @@ class _SearchFeaturesState extends State<SearchFeatures> {
                                         ? Image.network(
                                             article.urlToImage,
                                             fit: BoxFit.cover,
+                                            headers: {
+                                              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                                            },
+                                            errorBuilder: (context, error, stackTrace) {
+                                              return const Icon(Icons.broken_image, size: 50, color: Colors.grey);
+                                            },
                                           )
                                         : Image.asset(
                                             article.urlToImage,

@@ -408,19 +408,27 @@ class _TrendingCard extends StatelessWidget {
             flex: 2,
             child: ClipRRect(
               borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(15)),
-              child: article.urlToImage.isNotEmpty
-                  ? (isNetworkImage(article.urlToImage)
-                      ? Image.network(article.urlToImage,
-                          fit: BoxFit.cover, width: double.infinity)
-                      : Image.asset(article.urlToImage,
-                          fit: BoxFit.cover, width: double.infinity))
-                  : Container(
-                      color: Colors.grey[300],
-                      child: const Center(
-                          child:
-                              Icon(Icons.image, size: 40, color: Colors.grey)),
-                    ),
+                  const BorderRadius.vertical(top: Radius.circular(12)),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 500),
+                child: article.urlToImage.isNotEmpty
+                    ? (isNetworkImage(article.urlToImage)
+                        ? Image.network(
+                            article.urlToImage,
+                            fit: BoxFit.cover,
+                            headers: {
+                              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                            },
+                            errorBuilder: (context, error, stackTrace) {
+                              return const Icon(Icons.broken_image, size: 50, color: Colors.grey);
+                            },
+                          )
+                        : Image.asset(article.urlToImage, fit: BoxFit.cover))
+                    : Container(
+                        color: Colors.grey[300],
+                        child: const Icon(Icons.image, size: 40),
+                      ),
+              ),
             ),
           ),
           Expanded(
@@ -444,4 +452,25 @@ class _TrendingCard extends StatelessWidget {
       ),
     );
   }
+}
+
+// Trending Vibes Widget
+Widget trendingVibes(List<NewsArticle> articles) {
+  final trending = articles.where((a) => a.isTrending == true).take(4).toList();
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text("TRENDING VIBES!",
+          style: TextStyle(
+              fontWeight: FontWeight.bold, fontSize: 18, color: Colors.red)),
+      ...trending.map((article) => ListTile(
+            leading: article.urlToImage.isNotEmpty
+                ? Image.asset(article.urlToImage,
+                    width: 40, height: 40, fit: BoxFit.cover)
+                : Icon(Icons.trending_up),
+            title: Text(article.content),
+            subtitle: Text(article.content),
+          )),
+    ],
+  );
 }
