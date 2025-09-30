@@ -91,54 +91,23 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-class _HomeContent extends StatelessWidget {
+class _HomeContent extends StatefulWidget {
+  @override
+  State<_HomeContent> createState() => _HomeContentState();
+}
+
+class _HomeContentState extends State<_HomeContent> {
+  String selectedCountry = "Indonesia"; // default
+
+  void _onCountryChanged(String country) {
+    setState(() {
+      selectedCountry = country;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.white.withOpacity(0.95),
-        elevation: 1,
-        centerTitle: false,
-        title: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: primaryColor,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: const Text(
-            "UNTAREST",
-            style: TextStyle(
-              fontFamily: 'Poppins',
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-            ),
-          ),
-        ),
-        actions: [
-          IconButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SearchFeatures()),
-              );
-            },
-            icon: SizedBox(
-              width: 40,
-              height: 40,
-              child: Center(
-                child: SvgPicture.asset(
-                  'assets/images/logo_Search.svg',
-                  width: 24,
-                  height: 24,
-                  colorFilter:
-                      const ColorFilter.mode(primaryColor, BlendMode.srcIn),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -146,69 +115,65 @@ class _HomeContent extends StatelessWidget {
           image: DecorationImage(
             image: AssetImage("assets/images/BG_UNTAR.png"),
             fit: BoxFit.cover,
-            colorFilter: ColorFilter.mode(
-              Color.fromARGB(50, 118, 0, 0),
-              BlendMode.multiply,
-            ),
           ),
         ),
         child: SingleChildScrollView(
           child: Column(
             children: [
-              const SizedBox(height: 10),
-              const _TrendingVibesSection(),
               const SizedBox(height: 20),
+              _TrendingVibesSection(
+                selectedCountry: selectedCountry,
+                onCountryChanged: _onCountryChanged,
+              ),
+              const SizedBox(height: 5),
               Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.95),
-                    borderRadius:
-                        const BorderRadius.vertical(top: Radius.circular(25)),
-                  ),
-                  child: FutureBuilder<List<NewsArticle>>(
-                    future: SearchService()
-                        .searchNews("", region: "Indonesia"), // default
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      } else if (snapshot.hasError) {
-                        return const Text("Gagal memuat post trending");
-                      } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                        return const Text("Belum ada trending vibes di sini");
-                      }
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                child: FutureBuilder<List<NewsArticle>>(
+                  future:
+                      SearchService().searchNews("", region: selectedCountry),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    } else if (snapshot.hasError) {
+                      return const Text("Gagal memuat post trending");
+                    } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      return const Text("Belum ada trending vibes di sini");
+                    }
 
-                      final trendingPosts = snapshot.data!
-                          .where((a) => a.isTrending == true)
-                          .toList();
+                    final trendingPosts = snapshot.data!
+                        .where((a) => a.isTrending == true)
+                        .toList();
 
-                      return GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                          childAspectRatio: 0.7,
-                        ),
-                        itemCount: trendingPosts.length,
-                        itemBuilder: (context, index) {
-                          final post = trendingPosts[index];
-                          return GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => PostDetailPage(article: post),
-                                ),
-                              );
-                            },
-                            child: _PhotoCard(imageUrl: post.urlToImage),
-                          );
-                        },
-                      );
-                    },
-                  )),
+                    return GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                        childAspectRatio: 0.7,
+                      ),
+                      itemCount: trendingPosts.length,
+                      itemBuilder: (context, index) {
+                        final post = trendingPosts[index];
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => PostDetailPage(article: post),
+                              ),
+                            );
+                          },
+                          child: _PhotoCard(imageUrl: post.urlToImage),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
             ],
           ),
         ),
@@ -260,7 +225,14 @@ class _PhotoCard extends StatelessWidget {
 }
 
 class _TrendingVibesSection extends StatefulWidget {
-  const _TrendingVibesSection({super.key});
+  final String selectedCountry;
+  final Function(String) onCountryChanged;
+
+  const _TrendingVibesSection({
+    super.key,
+    required this.selectedCountry,
+    required this.onCountryChanged,
+  });
 
   @override
   State<_TrendingVibesSection> createState() => _TrendingVibesSectionState();
@@ -278,85 +250,67 @@ class _TrendingVibesSectionState extends State<_TrendingVibesSection> {
     'Global',
   ];
 
-  String selectedCountry = 'Indonesia'; //default
-
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                "Trending Vibes ✨",
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white,
-                  fontFamily: 'Poppins',
-                  shadows: [Shadow(color: Colors.black54, blurRadius: 1.0)],
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 30),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.8),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: const Color.fromARGB(255, 245, 218, 218).withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            // --- Kiri: Logo + TrendingVibes ---
+            Row(
+              children: [
+                Image.asset(
+                  'assets/images/trendup.png',
+                  width: 30,
+                  height: 30,
                 ),
-              ),
-              Row(
-                children: [
-                  Text(
-                    'Trending Vibes in $selectedCountry',
-                    style: const TextStyle(
+                const SizedBox(width: 8),
+                SizedBox(
+                  height: 28,
+                  child: Image.asset(
+                    'assets/images/LOGO_TRENDINGVIBES.png',
+                    fit: BoxFit.contain,
+                    color: const Color.fromARGB(255, 168, 34, 24),
+                  ),
+                ),
+              ],
+            ),
+
+            // --- Kanan: Region filter ---
+            Row(
+              children: [
+                Text(
+                  widget.selectedCountry,
+                  style: const TextStyle(
                       fontFamily: 'Poppins',
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  IconButton(
-                    icon:
-                        const Icon(Icons.arrow_drop_down, color: Colors.white),
-                    onPressed: () {
-                      _showCountryPicker(context, countries, (country) {
-                        setState(() {
-                          selectedCountry = country;
-                          // panggil ulang future builder di bawah kalau mau reload news
-                        });
-                      });
-                    },
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 140,
-            child: FutureBuilder<List<NewsArticle>>(
-              future: SearchService().searchNews("", region: selectedCountry),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(
-                      child: CircularProgressIndicator(color: Colors.white));
-                } else if (snapshot.hasError) {
-                  return const Center(
-                      child: Text("Gagal memuat trend.",
-                          style: TextStyle(color: Colors.white)));
-                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(
-                      child: Text("Tidak ada trend saat ini.",
-                          style: TextStyle(color: Colors.white)));
-                } else {
-                  return ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: snapshot.data!.length,
-                    itemBuilder: (context, index) {
-                      final article = snapshot.data![index];
-                      return _TrendingCard(article: article);
-                    },
-                  );
-                }
-              },
+                      color: Color.fromARGB(221, 168, 0, 0),
+                      fontSize: 15),
+                ),
+                IconButton(
+                  icon:
+                      const Icon(Icons.arrow_drop_down, color: Colors.black87),
+                  onPressed: () {
+                    _showCountryPicker(context, countries, (country) {
+                      widget.onCountryChanged(country);
+                    });
+                  },
+                ),
+              ],
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
