@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:untarest_app/models/search_news.dart';
+import 'package:untarest_app/screens/auth/postdetailpage.dart';
 import 'package:untarest_app/screens/home/search_features.dart';
 import 'package:untarest_app/services/search_service.dart';
 import 'package:untarest_app/utils/constants.dart';
@@ -18,9 +19,7 @@ class _HomePageState extends State<HomePage> {
 
   late final List<Widget> _widgetOptions = <Widget>[
     _HomeContent(),
-    const Center(
-        child: Text('Halaman Explore/Search Placeholder',
-            style: TextStyle(color: Colors.white))),
+    const SearchFeatures(),
     const Center(
         child: Text('Halaman Create/Upload Placeholder',
             style: TextStyle(color: Colors.white))),
@@ -160,43 +159,56 @@ class _HomeContent extends StatelessWidget {
               const _TrendingVibesSection(),
               const SizedBox(height: 20),
               Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.95),
-                  borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(25)),
-                ),
-                child: GridView.count(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 0.7,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: const [
-                    _PhotoCard(
-                      imageUrl: 'assets/images/img1_dummy.png',
-                      title: 'PREZIDEN UNTAR',
-                      description: 'Joget di sidang senat naik..',
-                    ),
-                    _PhotoCard(
-                      imageUrl: 'assets/images/img2_dummy.png',
-                      title: 'UNTAREST',
-                      description: 'Guru dan dosen..',
-                    ),
-                    _PhotoCard(
-                      imageUrl: 'assets/images/img3_dummy.png',
-                      title: 'HIMTI UNTAR',
-                      description: 'HIMTI UNTAR..',
-                    ),
-                    _PhotoCard(
-                      imageUrl: 'assets/images/img4_dummy.png',
-                      title: 'UNTAR CUP',
-                      description: 'Futsal..',
-                    ),
-                  ],
-                ),
-              ),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.95),
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(25)),
+                  ),
+                  child: FutureBuilder<List<NewsArticle>>(
+                    future: SearchService()
+                        .searchNews("", region: "Indonesia"), // default
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      } else if (snapshot.hasError) {
+                        return const Text("Gagal memuat post trending");
+                      } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                        return const Text("Belum ada trending vibes di sini");
+                      }
+
+                      final trendingPosts = snapshot.data!
+                          .where((a) => a.isTrending == true)
+                          .toList();
+
+                      return GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                          childAspectRatio: 0.7,
+                        ),
+                        itemCount: trendingPosts.length,
+                        itemBuilder: (context, index) {
+                          final post = trendingPosts[index];
+                          return GestureDetector(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => PostDetailPage(article: post),
+                                ),
+                              );
+                            },
+                            child: _PhotoCard(imageUrl: post.urlToImage),
+                          );
+                        },
+                      );
+                    },
+                  )),
             ],
           ),
         ),
@@ -207,14 +219,8 @@ class _HomeContent extends StatelessWidget {
 
 class _PhotoCard extends StatelessWidget {
   final String imageUrl;
-  final String title;
-  final String description;
 
-  const _PhotoCard({
-    required this.imageUrl,
-    required this.title,
-    required this.description,
-  });
+  const _PhotoCard({Key? key, required this.imageUrl}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -231,55 +237,23 @@ class _PhotoCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            flex: 3,
-            child: ClipRRect(
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(15)),
-              child: Image.asset(
-                imageUrl,
-                fit: BoxFit.cover,
-                width: double.infinity,
+      child: ClipRRect(
+        borderRadius: const BorderRadius.all(Radius.circular(15)),
+        child: imageUrl.isNotEmpty
+            ? (isNetworkImage(imageUrl)
+                ? Image.network(
+                    imageUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(Icons.broken_image,
+                          size: 50, color: Colors.grey);
+                    },
+                  )
+                : Image.asset(imageUrl, fit: BoxFit.cover))
+            : Container(
+                color: Colors.grey[300],
+                child: const Icon(Icons.image, size: 40),
               ),
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Padding(
-              padding: const EdgeInsets.all(10.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontFamily: "Poppins",
-                      fontWeight: FontWeight.w800,
-                      fontSize: 14,
-                      color: primaryColor,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    description,
-                    style: const TextStyle(
-                      fontFamily: "Poppins",
-                      fontSize: 12,
-                      color: Colors.black87,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -293,8 +267,18 @@ class _TrendingVibesSection extends StatefulWidget {
 }
 
 class _TrendingVibesSectionState extends State<_TrendingVibesSection> {
-  String selectedRegion = "all";
-  final List<String> regions = ["all", "Indonesia", "World"];
+  final List<String> countries = [
+    'Indonesia',
+    'USA',
+    'Japan',
+    'South Korea',
+    'China',
+    'France',
+    'UK',
+    'Global',
+  ];
+
+  String selectedCountry = 'Indonesia'; //default
 
   @override
   Widget build(BuildContext context) {
@@ -316,34 +300,29 @@ class _TrendingVibesSectionState extends State<_TrendingVibesSection> {
                   shadows: [Shadow(color: Colors.black54, blurRadius: 1.0)],
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.9),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: selectedRegion,
-                    icon:
-                        const Icon(Icons.arrow_drop_down, color: primaryColor),
+              Row(
+                children: [
+                  Text(
+                    'Trending Vibes in $selectedCountry',
                     style: const TextStyle(
-                        fontFamily: 'Poppins',
-                        color: primaryColor,
-                        fontWeight: FontWeight.bold),
-                    items: regions
-                        .map((r) => DropdownMenuItem(
-                              value: r,
-                              child: Text(r),
-                            ))
-                        .toList(),
-                    onChanged: (val) {
-                      setState(() {
-                        selectedRegion = val ?? "all";
+                      fontFamily: 'Poppins',
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  IconButton(
+                    icon:
+                        const Icon(Icons.arrow_drop_down, color: Colors.white),
+                    onPressed: () {
+                      _showCountryPicker(context, countries, (country) {
+                        setState(() {
+                          selectedCountry = country;
+                          // panggil ulang future builder di bawah kalau mau reload news
+                        });
                       });
                     },
                   ),
-                ),
+                ],
               ),
             ],
           ),
@@ -351,7 +330,7 @@ class _TrendingVibesSectionState extends State<_TrendingVibesSection> {
           SizedBox(
             height: 140,
             child: FutureBuilder<List<NewsArticle>>(
-              future: SearchService().searchNews("", region: selectedRegion),
+              future: SearchService().searchNews("", region: selectedCountry),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
@@ -390,8 +369,11 @@ class _TrendingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+
     return Container(
-      width: 200,
+      // max 250px biar gak kegedean, min 180px biar tetap kebaca
+      width: screenWidth < 400 ? screenWidth * 0.8 : 250,
       margin: const EdgeInsets.only(right: 12),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -408,50 +390,51 @@ class _TrendingCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            flex: 2,
-            child: ClipRRect(
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(12)),
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 500),
-                child: article.urlToImage.isNotEmpty
-                    ? (isNetworkImage(article.urlToImage)
-                        ? Image.network(
-                            article.urlToImage,
-                            fit: BoxFit.cover,
-                            headers: {
-                              'User-Agent':
-                                  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                            },
-                            errorBuilder: (context, error, stackTrace) {
-                              return const Icon(Icons.broken_image,
-                                  size: 50, color: Colors.grey);
-                            },
-                          )
-                        : Image.asset(article.urlToImage, fit: BoxFit.cover))
-                    : Container(
-                        color: Colors.grey[300],
-                        child: const Icon(Icons.image, size: 40),
-                      ),
-              ),
-            ),
+          // Bagian gambar
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+            child: article.urlToImage.isNotEmpty
+                ? (isNetworkImage(article.urlToImage)
+                    ? Image.network(
+                        article.urlToImage,
+                        height: 100,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        headers: {
+                          'User-Agent':
+                              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Icon(Icons.broken_image,
+                              size: 50, color: Colors.grey);
+                        },
+                      )
+                    : Image.asset(
+                        article.urlToImage,
+                        height: 100,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      ))
+                : Container(
+                    height: 100,
+                    color: Colors.grey[300],
+                    child: const Icon(Icons.image, size: 40),
+                  ),
           ),
-          Expanded(
-            flex: 1,
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Text(
-                article.content,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                  fontFamily: "Poppins",
-                  color: Colors.black87,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+
+          // Bagian text
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              article.content,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+                fontFamily: "Poppins",
+                color: Colors.black87,
               ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -478,5 +461,57 @@ Widget trendingVibes(List<NewsArticle> articles) {
             subtitle: Text(article.content),
           )),
     ],
+  );
+}
+
+//last edited-eln
+void _showCountryPicker(
+    BuildContext context, List<String> countries, Function(String) onSelected) {
+  showModalBottomSheet(
+    context: context,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (context) {
+      String filter = '';
+      return StatefulBuilder(
+        builder: (context, setState) {
+          final filtered = countries
+              .where((c) => c.toLowerCase().contains(filter.toLowerCase()))
+              .toList();
+          return Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  decoration: InputDecoration(
+                    hintText: 'Search country...',
+                    prefixIcon: Icon(Icons.search),
+                  ),
+                  onChanged: (val) => setState(() => filter = val),
+                ),
+                SizedBox(
+                  height: 180, // 3 items * 60px each
+                  child: ListView.builder(
+                    itemCount: filtered.length,
+                    itemExtent: 60,
+                    itemBuilder: (context, idx) {
+                      return ListTile(
+                        title: Text(filtered[idx]),
+                        onTap: () {
+                          Navigator.pop(context);
+                          onSelected(filtered[idx]);
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    },
   );
 }
