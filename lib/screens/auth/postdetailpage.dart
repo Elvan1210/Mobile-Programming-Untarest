@@ -1,122 +1,617 @@
 import 'package:flutter/material.dart';
 import 'package:untarest_app/models/search_news.dart';
+import 'package:untarest_app/services/firestore_service.dart';
+import 'package:untarest_app/utils/constants.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class PostDetailPage extends StatefulWidget {
-  final NewsArticle article; // <-- Add this
+  final NewsArticle article;
 
-  const PostDetailPage({super.key, required this.article}); // <-- Add required
+  const PostDetailPage({super.key, required this.article});
 
   @override
   State<PostDetailPage> createState() => _PostDetailPageState();
 }
 
 class _PostDetailPageState extends State<PostDetailPage> {
-  int likes = 3700;
-  bool isLiked = false;
-  bool isSaved = false;
-
-  List<String> comments = [
-    "user123: Omagaa",
-    "user223: Ini baru contoh tampilan",
-  ];
-
+  final FirestoreService _firestoreService = FirestoreService();
   final TextEditingController _commentController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+  bool _isPostingComment = false;
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _toggleLike(bool isCurrentlyLiked) async {
+    try {
+      await _firestoreService.toggleLike(widget.article.url);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              isCurrentlyLiked ? 'Like dihapus' : '❤️ Liked!',
+              style: const TextStyle(fontFamily: 'Poppins'),
+            ),
+            duration: const Duration(milliseconds: 1200),
+            backgroundColor: primaryColor,
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _toggleSave(bool isCurrentlySaved) async {
+    try {
+      await _firestoreService.toggleSave(
+        widget.article.url,
+        widget.article.urlToImage,
+        widget.article.content,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              isCurrentlySaved ? 'Dihapus dari simpanan' : '🔖 Disimpan!',
+              style: const TextStyle(fontFamily: 'Poppins'),
+            ),
+            duration: const Duration(milliseconds: 1200),
+            backgroundColor: primaryColor,
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _postComment() async {
+    if (_commentController.text.trim().isEmpty) return;
+
+    setState(() => _isPostingComment = true);
+
+    try {
+      await _firestoreService.addComment(
+        widget.article.url,
+        _commentController.text.trim(),
+      );
+
+      _commentController.clear();
+      FocusScope.of(context).unfocus();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              '💬 Komentar berhasil diposting!',
+              style: TextStyle(fontFamily: 'Poppins'),
+            ),
+            duration: Duration(milliseconds: 1200),
+            backgroundColor: primaryColor,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error posting comment: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      setState(() => _isPostingComment = false);
+    }
+  }
+
+  void _showCommentsBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.75,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        builder: (context, scrollController) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+          ),
+          child: Column(
+            children: [
+              // Handle bar
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                width: 50,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+
+              // Title
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                child: Row(
+                  children: [
+                    const Icon(Icons.comment, color: primaryColor, size: 24),
+                    const SizedBox(width: 8),
+                    StreamBuilder<int>(
+                      stream: _firestoreService.getCommentsCount(widget.article.url),
+                      builder: (context, snapshot) {
+                        final count = snapshot.data ?? 0;
+                        return Text(
+                          'Komentar ($count)',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Poppins',
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
+              const Divider(height: 1),
+
+              // Comments list
+              Expanded(
+                child: StreamBuilder<QuerySnapshot>(
+                  stream: _firestoreService.getComments(widget.article.url),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                        child: CircularProgressIndicator(color: primaryColor),
+                      );
+                    }
+
+                    if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.chat_bubble_outline,
+                              size: 80,
+                              color: Colors.grey[300],
+                            ),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Belum ada komentar',
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 16,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Jadilah yang pertama berkomentar!',
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 14,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    final comments = snapshot.data!.docs;
+                    return ListView.builder(
+                      controller: scrollController,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      itemCount: comments.length,
+                      itemBuilder: (context, index) {
+                        final comment = comments[index].data() as Map<String, dynamic>;
+                        final timestamp = comment['timestamp'] as Timestamp?;
+                        final userEmail = comment['userEmail'] ?? 'Anonymous';
+                        final text = comment['text'] ?? '';
+
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Avatar
+                              CircleAvatar(
+                                radius: 20,
+                                backgroundColor: primaryColor.withOpacity(0.1),
+                                child: Text(
+                                  userEmail[0].toUpperCase(),
+                                  style: const TextStyle(
+                                    color: primaryColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Poppins',
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+
+                              // Comment content
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            userEmail,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                              fontFamily: 'Poppins',
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        if (timestamp != null) ...[
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            _formatTimestamp(timestamp.toDate()),
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey[600],
+                                              fontFamily: 'Poppins',
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      text,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontFamily: 'Poppins',
+                                        height: 1.4,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+
+              // Comment input
+              Container(
+                padding: EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  top: 12,
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 12,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 10,
+                      offset: const Offset(0, -2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _commentController,
+                        decoration: InputDecoration(
+                          hintText: 'Tulis komentar...',
+                          hintStyle: const TextStyle(fontFamily: 'Poppins'),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(25),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(25),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(25),
+                            borderSide: const BorderSide(color: primaryColor, width: 2),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 10,
+                          ),
+                        ),
+                        maxLines: null,
+                        style: const TextStyle(fontFamily: 'Poppins'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      decoration: const BoxDecoration(
+                        color: primaryColor,
+                        shape: BoxShape.circle,
+                      ),
+                      child: IconButton(
+                        onPressed: _isPostingComment ? null : _postComment,
+                        icon: _isPostingComment
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(Icons.send, color: Colors.white, size: 20),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatTimestamp(DateTime timestamp) {
+    final now = DateTime.now();
+    final difference = now.difference(timestamp);
+
+    if (difference.inDays > 7) {
+      return '${timestamp.day}/${timestamp.month}/${timestamp.year}';
+    } else if (difference.inDays > 0) {
+      return '${difference.inDays}h yang lalu';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours}j yang lalu';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes}m yang lalu';
+    } else {
+      return 'Baru saja';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.article.content)), // Use news title
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            widget.article.urlToImage.isNotEmpty
-                ? Image.network(
-                    widget.article.urlToImage,
-                    headers: {
-                      'User-Agent':
-                          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                    },
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(Icons.broken_image,
-                          size: 50, color: Colors.grey);
-                    },
-                  )
-                : Container(
-                    height: 200,
-                    color: Colors.grey[300],
-                    child: const Icon(Icons.article, size: 100),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0.5,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          'Detail Post',
+          style: TextStyle(
+            color: Colors.black,
+            fontFamily: 'Poppins',
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              controller: _scrollController,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Image
+                  if (widget.article.urlToImage.isNotEmpty)
+                    isNetworkImage(widget.article.urlToImage)
+                        ? Image.network(
+                            widget.article.urlToImage,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            headers: {
+                              'User-Agent':
+                                  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                            },
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                height: 300,
+                                color: Colors.grey[300],
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.broken_image,
+                                    size: 100,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              );
+                            },
+                          )
+                        : Image.asset(
+                            widget.article.urlToImage,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          )
+                  else
+                    Container(
+                      height: 300,
+                      color: Colors.grey[300],
+                      child: const Center(
+                        child: Icon(Icons.image, size: 100, color: Colors.grey),
+                      ),
+                    ),
+
+                  // Content
+                  Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.article.content,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            height: 1.6,
+                            fontFamily: 'Poppins',
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Text(widget.article.content,
-                  style: const TextStyle(
-                      fontSize: 20, fontWeight: FontWeight.bold)),
+                ],
+              ),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: Text(widget.article.content),
+          ),
+
+          // Bottom action bar
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 10,
+                  offset: const Offset(0, -2),
+                ),
+              ],
             ),
-            Row(
+            child: Row(
               children: [
-                IconButton(
-                  icon: Icon(
-                    isLiked ? Icons.favorite : Icons.favorite_border,
-                    color: Colors.red,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      isLiked = !isLiked;
-                      likes += isLiked ? 1 : -1;
-                    });
+                // Like button
+                StreamBuilder<bool>(
+                  stream: _firestoreService.isSavedStream(widget.article.url).map((_) => true).handleError((_) => false),
+                  builder: (context, _) {
+                    return FutureBuilder<bool>(
+                      future: _firestoreService.isLiked(widget.article.url),
+                      builder: (context, snapshot) {
+                        final isLiked = snapshot.data ?? false;
+
+                        return _ActionButton(
+                          icon: isLiked ? Icons.favorite : Icons.favorite_border,
+                          color: isLiked ? Colors.red : Colors.grey[700]!,
+                          label: 'Like',
+                          onTap: () => _toggleLike(isLiked),
+                        );
+                      },
+                    );
                   },
                 ),
-                Text("$likes Likes"),
-                IconButton(
-                  icon: Icon(Icons.comment),
-                  onPressed: () {},
+
+                const SizedBox(width: 16),
+
+                // Comment button
+                StreamBuilder<int>(
+                  stream: _firestoreService.getCommentsCount(widget.article.url),
+                  builder: (context, snapshot) {
+                    final count = snapshot.data ?? 0;
+
+                    return _ActionButton(
+                      icon: Icons.comment_outlined,
+                      color: Colors.grey[700]!,
+                      label: count > 0 ? '$count' : 'Comment',
+                      onTap: _showCommentsBottomSheet,
+                    );
+                  },
                 ),
-                IconButton(
-                  icon: Icon(
-                    isSaved ? Icons.bookmark : Icons.bookmark_border,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      isSaved = !isSaved;
-                    });
+
+                const Spacer(),
+
+                // Save button
+                StreamBuilder<bool>(
+                  stream: _firestoreService.isSavedStream(widget.article.url),
+                  builder: (context, snapshot) {
+                    final isSaved = snapshot.data ?? false;
+
+                    return _ActionButton(
+                      icon: isSaved ? Icons.bookmark : Icons.bookmark_border,
+                      color: isSaved ? primaryColor : Colors.grey[700]!,
+                      label: 'Save',
+                      onTap: () => _toggleSave(isSaved),
+                    );
                   },
                 ),
               ],
             ),
-            Divider(),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Text("Comments:",
-                  style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-            ...comments.map((c) => ListTile(title: Text(c))),
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _commentController,
-                      decoration: InputDecoration(hintText: "Add a comment..."),
-                    ),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.send),
-                    onPressed: () {
-                      setState(() {
-                        comments.add("me: ${_commentController.text}");
-                        _commentController.clear();
-                      });
-                    },
-                  )
-                ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String label;
+  final VoidCallback onTap;
+
+  const _ActionButton({
+    required this.icon,
+    required this.color,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 24),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.w600,
+                fontFamily: 'Poppins',
+                fontSize: 14,
               ),
-            )
+            ),
           ],
         ),
       ),
