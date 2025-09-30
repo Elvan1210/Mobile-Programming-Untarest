@@ -6,7 +6,7 @@ import 'package:untarest_app/utils/custom_widgets.dart';
 import 'package:untarest_app/utils/constants.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({Key? key}) : super(key: key);
+  const LoginPage({super.key});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -66,10 +66,7 @@ class _LoginPageState extends State<LoginPage> {
                 obscureText: true,
                 icon: Icons.lock,
               ),
-              CustomButton(
-                text: 'Login',
-                onPressed: _login,
-              ),
+              CustomButton(text: 'Login', onPressed: _login),
               const SizedBox(height: 20),
               TextButton(
                 onPressed: () {

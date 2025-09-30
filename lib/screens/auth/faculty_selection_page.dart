@@ -9,10 +9,10 @@ class FacultySelectionPage extends StatefulWidget {
   final String password;
 
   const FacultySelectionPage({
-    Key? key,
+    super.key,
     required this.email,
     required this.password,
-  }) : super(key: key);
+  });
 
   @override
   State<FacultySelectionPage> createState() => _FacultySelectionPageState();
@@ -32,12 +32,12 @@ class _FacultySelectionPageState extends State<FacultySelectionPage> {
 
   void _register() async {
     if (_selectedFaculty == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a faculty.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please select a faculty.')));
       return;
     }
-    
+
     final user = await _authService.registerWithEmailAndPassword(
       widget.email,
       widget.password,
@@ -105,10 +105,7 @@ class _FacultySelectionPageState extends State<FacultySelectionPage> {
                 ),
               ),
               const SizedBox(height: 20),
-              CustomButton(
-                text: 'Sign Up',
-                onPressed: _register,
-              ),
+              CustomButton(text: 'Sign Up', onPressed: _register),
             ],
           ),
         ),
