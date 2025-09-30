@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:untarest_app/models/search_news.dart';
 import 'package:untarest_app/screens/home/search_features.dart';
+import 'package:untarest_app/screens/auth/postdetailpage.dart';
 import 'package:untarest_app/services/search_service.dart';
 import 'package:untarest_app/utils/constants.dart';
 import 'package:untarest_app/screens/profile/profile.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -92,7 +94,67 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-class _HomeContent extends StatelessWidget {
+class _HomeContent extends StatefulWidget {
+  @override
+  State<_HomeContent> createState() => _HomeContentState();
+}
+
+class _HomeContentState extends State<_HomeContent> {
+  List<NewsArticle> allNews = [];
+  Set<String> savedArticles = {}; // Store in memory for now
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAllNews();
+  }
+
+  void _toggleSaveArticle(NewsArticle article) {
+    setState(() {
+      final articleId = article.urlToImage;
+      if (savedArticles.contains(articleId)) {
+        savedArticles.remove(articleId);
+      } else {
+        savedArticles.add(articleId);
+      }
+    });
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          savedArticles.contains(article.urlToImage) 
+            ? '✓ Foto disimpan!' 
+            : 'Foto dihapus dari simpanan',
+          style: const TextStyle(fontFamily: 'Poppins'),
+        ),
+        duration: const Duration(milliseconds: 1500),
+        backgroundColor: primaryColor,
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _loadAllNews() async {
+    setState(() => _isLoading = true);
+    try {
+      final data = await SearchService().searchNews("");
+      setState(() {
+        allNews = data;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        allNews = [];
+        _isLoading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -153,133 +215,235 @@ class _HomeContent extends StatelessWidget {
             ),
           ),
         ),
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              const SizedBox(height: 10),
-              const _TrendingVibesSection(),
-              const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.95),
-                  borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(25)),
-                ),
-                child: GridView.count(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 0.7,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: const [
-                    _PhotoCard(
-                      imageUrl: 'assets/images/img1_dummy.png',
-                      title: 'PREZIDEN UNTAR',
-                      description: 'Joget di sidang senat naik..',
-                    ),
-                    _PhotoCard(
-                      imageUrl: 'assets/images/img2_dummy.png',
-                      title: 'UNTAREST',
-                      description: 'Guru dan dosen..',
-                    ),
-                    _PhotoCard(
-                      imageUrl: 'assets/images/img3_dummy.png',
-                      title: 'HIMTI UNTAR',
-                      description: 'HIMTI UNTAR..',
-                    ),
-                    _PhotoCard(
-                      imageUrl: 'assets/images/img4_dummy.png',
-                      title: 'UNTAR CUP',
-                      description: 'Futsal..',
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _PhotoCard extends StatelessWidget {
-  final String imageUrl;
-  final String title;
-  final String description;
-
-  const _PhotoCard({
-    required this.imageUrl,
-    required this.title,
-    required this.description,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.3),
-            spreadRadius: 2,
-            blurRadius: 5,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            flex: 3,
-            child: ClipRRect(
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(15)),
-              child: Image.asset(
-                imageUrl,
-                fit: BoxFit.cover,
-                width: double.infinity,
-              ),
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Padding(
-              padding: const EdgeInsets.all(10.0),
+        child: CustomScrollView(
+          slivers: [
+            SliverToBoxAdapter(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontFamily: "Poppins",
-                      fontWeight: FontWeight.w800,
-                      fontSize: 14,
-                      color: primaryColor,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    description,
-                    style: const TextStyle(
-                      fontFamily: "Poppins",
-                      fontSize: 12,
-                      color: Colors.black87,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                children: const [
+                  SizedBox(height: 10),
+                  _TrendingVibesSection(),
+                  SizedBox(height: 20),
                 ],
               ),
             ),
-          ),
-        ],
+            
+            SliverToBoxAdapter(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.95),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(25)),
+                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 400,
+                        child: Center(
+                          child: CircularProgressIndicator(color: primaryColor),
+                        ),
+                      )
+                    : allNews.isEmpty
+                        ? const SizedBox(
+                            height: 400,
+                            child: Center(
+                              child: Text(
+                                "Tidak ada konten saat ini.",
+                                style: TextStyle(
+                                  fontFamily: "Poppins",
+                                  fontSize: 16,
+                                  color: Colors.black54,
+                                ),
+                              ),
+                            ),
+                          )
+                        : MasonryGridView.count(
+                            crossAxisCount: 2,
+                            mainAxisSpacing: 12,
+                            crossAxisSpacing: 12,
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: allNews.length,
+                            itemBuilder: (context, index) {
+                              final article = allNews[index];
+                              final isSaved = savedArticles.contains(article.urlToImage);
+                              
+                              return GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => PostDetailPage(article: article),
+                                    ),
+                                  );
+                                },
+                                child: Stack(
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(15),
+                                      child: article.urlToImage.isNotEmpty
+                                          ? (isNetworkImage(article.urlToImage)
+                                              ? Image.network(
+                                                  article.urlToImage,
+                                                  fit: BoxFit.cover,
+                                                  loadingBuilder: (context, child, loadingProgress) {
+                                                    if (loadingProgress == null) return child;
+                                                    return Container(
+                                                      height: 200,
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.grey[200],
+                                                        borderRadius: BorderRadius.circular(15),
+                                                      ),
+                                                      child: Center(
+                                                        child: CircularProgressIndicator(
+                                                          value: loadingProgress.expectedTotalBytes != null
+                                                              ? loadingProgress.cumulativeBytesLoaded /
+                                                                  loadingProgress.expectedTotalBytes!
+                                                              : null,
+                                                          color: primaryColor,
+                                                          strokeWidth: 2,
+                                                        ),
+                                                      ),
+                                                    );
+                                                  },
+                                                  headers: {
+                                                    'User-Agent':
+                                                        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                                                  },
+                                                  errorBuilder: (context, error, stackTrace) {
+                                                    return Container(
+                                                      height: 200,
+                                                      decoration: BoxDecoration(
+                                                        gradient: LinearGradient(
+                                                          colors: [
+                                                            Colors.grey[300]!,
+                                                            Colors.grey[400]!,
+                                                          ],
+                                                          begin: Alignment.topLeft,
+                                                          end: Alignment.bottomRight,
+                                                        ),
+                                                        borderRadius: BorderRadius.circular(15),
+                                                      ),
+                                                      child: Column(
+                                                        mainAxisAlignment: MainAxisAlignment.center,
+                                                        children: [
+                                                          const Icon(
+                                                            Icons.broken_image_outlined,
+                                                            size: 50,
+                                                            color: Colors.grey,
+                                                          ),
+                                                          const SizedBox(height: 8),
+                                                          Padding(
+                                                            padding: const EdgeInsets.all(8.0),
+                                                            child: Text(
+                                                              article.content,
+                                                              style: const TextStyle(
+                                                                fontFamily: 'Poppins',
+                                                                fontSize: 12,
+                                                                color: Colors.black54,
+                                                              ),
+                                                              maxLines: 3,
+                                                              overflow: TextOverflow.ellipsis,
+                                                              textAlign: TextAlign.center,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    );
+                                                  },
+                                                )
+                                              : Image.asset(
+                                                  article.urlToImage,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (context, error, stackTrace) {
+                                                    return Container(
+                                                      height: 200,
+                                                      color: Colors.grey[300],
+                                                      child: const Icon(
+                                                        Icons.broken_image,
+                                                        size: 50,
+                                                        color: Colors.grey,
+                                                      ),
+                                                    );
+                                                  },
+                                                ))
+                                          : Container(
+                                              height: 200,
+                                              decoration: BoxDecoration(
+                                                gradient: LinearGradient(
+                                                  colors: [
+                                                    primaryColor.withOpacity(0.3),
+                                                    primaryColor.withOpacity(0.5),
+                                                  ],
+                                                  begin: Alignment.topLeft,
+                                                  end: Alignment.bottomRight,
+                                                ),
+                                                borderRadius: BorderRadius.circular(15),
+                                              ),
+                                              child: Center(
+                                                child: Column(
+                                                  mainAxisAlignment: MainAxisAlignment.center,
+                                                  children: [
+                                                    const Icon(
+                                                      Icons.image_outlined,
+                                                      size: 40,
+                                                      color: Colors.white,
+                                                    ),
+                                                    const SizedBox(height: 8),
+                                                    Padding(
+                                                      padding: const EdgeInsets.all(12.0),
+                                                      child: Text(
+                                                        article.content,
+                                                        style: const TextStyle(
+                                                          fontFamily: 'Poppins',
+                                                          fontSize: 12,
+                                                          color: Colors.white,
+                                                          fontWeight: FontWeight.w600,
+                                                        ),
+                                                        maxLines: 3,
+                                                        overflow: TextOverflow.ellipsis,
+                                                        textAlign: TextAlign.center,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                    ),
+                                    // Save/Bookmark Button
+                                    Positioned(
+                                      top: 8,
+                                      right: 8,
+                                      child: GestureDetector(
+                                        onTap: () => _toggleSaveArticle(article),
+                                        child: Container(
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withOpacity(0.9),
+                                            shape: BoxShape.circle,
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black.withOpacity(0.2),
+                                                blurRadius: 4,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ],
+                                          ),
+                                          child: Icon(
+                                            isSaved ? Icons.bookmark : Icons.bookmark_border,
+                                            color: isSaved ? primaryColor : Colors.grey[700],
+                                            size: 20,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -325,8 +489,7 @@ class _TrendingVibesSectionState extends State<_TrendingVibesSection> {
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
                     value: selectedRegion,
-                    icon:
-                        const Icon(Icons.arrow_drop_down, color: primaryColor),
+                    icon: const Icon(Icons.arrow_drop_down, color: primaryColor),
                     style: const TextStyle(
                         fontFamily: 'Poppins',
                         color: primaryColor,
@@ -390,93 +553,87 @@ class _TrendingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 200,
-      margin: const EdgeInsets.only(right: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            spreadRadius: 1,
-            blurRadius: 5,
-            offset: const Offset(0, 3),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PostDetailPage(article: article),
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            flex: 2,
-            child: ClipRRect(
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(12)),
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 500),
-                child: article.urlToImage.isNotEmpty
-                    ? (isNetworkImage(article.urlToImage)
-                        ? Image.network(
-                            article.urlToImage,
-                            fit: BoxFit.cover,
-                            headers: {
-                              'User-Agent':
-                                  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                            },
-                            errorBuilder: (context, error, stackTrace) {
-                              return const Icon(Icons.broken_image,
-                                  size: 50, color: Colors.grey);
-                            },
-                          )
-                        : Image.asset(article.urlToImage, fit: BoxFit.cover))
-                    : Container(
-                        color: Colors.grey[300],
-                        child: const Icon(Icons.image, size: 40),
-                      ),
-              ),
+        );
+      },
+      child: Container(
+        width: 200,
+        margin: const EdgeInsets.only(right: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              spreadRadius: 1,
+              blurRadius: 5,
+              offset: const Offset(0, 3),
             ),
-          ),
-          Expanded(
-            flex: 1,
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Text(
-                article.content,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                  fontFamily: "Poppins",
-                  color: Colors.black87,
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 2,
+              child: ClipRRect(
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(12)),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 500),
+                  child: article.urlToImage.isNotEmpty
+                      ? (isNetworkImage(article.urlToImage)
+                          ? Image.network(
+                              article.urlToImage,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              headers: {
+                                'User-Agent':
+                                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                              },
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  color: Colors.grey[300],
+                                  child: const Icon(Icons.broken_image,
+                                      size: 50, color: Colors.grey),
+                                );
+                              },
+                            )
+                          : Image.asset(article.urlToImage,
+                              fit: BoxFit.cover, width: double.infinity))
+                      : Container(
+                          color: Colors.grey[300],
+                          child: const Icon(Icons.image, size: 40),
+                        ),
                 ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               ),
             ),
-          ),
-        ],
+            Expanded(
+              flex: 1,
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Text(
+                  article.content,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    fontFamily: "Poppins",
+                    color: Colors.black87,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
-}
-
-// Trending Vibes Widget
-Widget trendingVibes(List<NewsArticle> articles) {
-  final trending = articles.where((a) => a.isTrending == true).take(4).toList();
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text("TRENDING VIBES!",
-          style: TextStyle(
-              fontWeight: FontWeight.bold, fontSize: 18, color: Colors.red)),
-      ...trending.map((article) => ListTile(
-            leading: article.urlToImage.isNotEmpty
-                ? Image.asset(article.urlToImage,
-                    width: 40, height: 40, fit: BoxFit.cover)
-                : Icon(Icons.trending_up),
-            title: Text(article.content),
-            subtitle: Text(article.content),
-          )),
-    ],
-  );
 }
