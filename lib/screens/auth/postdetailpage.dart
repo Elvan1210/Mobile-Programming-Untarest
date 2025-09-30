@@ -34,10 +34,12 @@ class _PostDetailPageState extends State<PostDetailPage> {
                 ? Image.network(
                     widget.article.urlToImage,
                     headers: {
-                      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                      'User-Agent':
+                          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                     },
                     errorBuilder: (context, error, stackTrace) {
-                      return const Icon(Icons.broken_image, size: 50, color: Colors.grey);
+                      return const Icon(Icons.broken_image,
+                          size: 50, color: Colors.grey);
                     },
                   )
                 : Container(
