@@ -18,8 +18,12 @@ class _HomePageState extends State<HomePage> {
 
   late final List<Widget> _widgetOptions = <Widget>[
     _HomeContent(),
-    const Center(child: Text('Halaman Explore/Search Placeholder', style: TextStyle(color: Colors.white))),
-    const Center(child: Text('Halaman Create/Upload Placeholder', style: TextStyle(color: Colors.white))),
+    const Center(
+        child: Text('Halaman Explore/Search Placeholder',
+            style: TextStyle(color: Colors.white))),
+    const Center(
+        child: Text('Halaman Create/Upload Placeholder',
+            style: TextStyle(color: Colors.white))),
     const ProfilePage(),
   ];
 
@@ -61,13 +65,15 @@ class _HomePageState extends State<HomePage> {
                 'assets/images/logo_TrendBottomNav.svg',
                 width: 24,
                 height: 24,
-                colorFilter: const ColorFilter.mode(Colors.grey, BlendMode.srcIn),
+                colorFilter:
+                    const ColorFilter.mode(Colors.grey, BlendMode.srcIn),
               ),
               activeIcon: SvgPicture.asset(
                 'assets/images/logo_TrendBottomNav.svg',
                 width: 28,
                 height: 28,
-                colorFilter: const ColorFilter.mode(primaryColor, BlendMode.srcIn),
+                colorFilter:
+                    const ColorFilter.mode(primaryColor, BlendMode.srcIn),
               ),
               label: 'Home',
             ),
@@ -307,9 +313,7 @@ class _TrendingVibesSectionState extends State<_TrendingVibesSection> {
                   fontWeight: FontWeight.w900,
                   color: Colors.white,
                   fontFamily: 'Poppins',
-                  shadows: [
-                    Shadow(color: Colors.black54, blurRadius: 1.0)
-                  ],
+                  shadows: [Shadow(color: Colors.black54, blurRadius: 1.0)],
                 ),
               ),
               Container(
@@ -417,10 +421,12 @@ class _TrendingCard extends StatelessWidget {
                             article.urlToImage,
                             fit: BoxFit.cover,
                             headers: {
-                              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                              'User-Agent':
+                                  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                             },
                             errorBuilder: (context, error, stackTrace) {
-                              return const Icon(Icons.broken_image, size: 50, color: Colors.grey);
+                              return const Icon(Icons.broken_image,
+                                  size: 50, color: Colors.grey);
                             },
                           )
                         : Image.asset(article.urlToImage, fit: BoxFit.cover))
