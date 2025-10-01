@@ -8,7 +8,6 @@ import 'package:untarest_app/utils/constants.dart';
 import 'package:untarest_app/screens/profile/profile.dart';
 import 'package:untarest_app/utils/search_bar.dart';
 import 'package:untarest_app/widgets/news_feed_grid.dart';
-import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
