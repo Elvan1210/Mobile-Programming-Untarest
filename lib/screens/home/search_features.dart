@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:untarest_app/screens/home/home_page.dart';
-import 'package:untarest_app/utils/constants.dart';
 import 'package:untarest_app/services/search_service.dart';
-import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
-import 'package:untarest_app/screens/auth/postdetailpage.dart';
 import 'package:untarest_app/models/search_news.dart';
+import 'package:untarest_app/widgets/news_feed_grid.dart';
 
 class SearchFeatures extends StatefulWidget {
   const SearchFeatures({super.key});
@@ -71,11 +68,14 @@ class _SearchFeaturesState extends State<SearchFeatures> {
             onChanged: (q) {
               _searchNews(q);
             },
-            onSubmitted: _searchNews,
+            onSubmitted: (val) {
+              _searchNews(val);
+              FocusScope.of(context).unfocus();
+            },
             style: const TextStyle(fontFamily: "Poppins"),
             decoration: InputDecoration(
               hintText: "Untarian let's search for your daily new vibes!",
-              hintStyle: const TextStyle(fontFamily: "Poppins"),
+              hintStyle: const TextStyle(fontFamily: "Poppins", fontSize: 8.5),
               border: InputBorder.none,
               contentPadding:
                   const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -141,64 +141,7 @@ class _SearchFeaturesState extends State<SearchFeatures> {
             Expanded(
               child: _isLoading
                   ? const Center(child: CircularProgressIndicator())
-                  : results.isEmpty
-                      ? const Center(
-                          child: Text(
-                            "Yakin bukan kabar hoax? Tidak ada loh",
-                            style:
-                                TextStyle(fontFamily: "Poppins", fontSize: 16),
-                          ),
-                        )
-                      : MasonryGridView.count(
-                          crossAxisCount: 2,
-                          mainAxisSpacing: 10,
-                          crossAxisSpacing: 10,
-                          padding: const EdgeInsets.all(10),
-                          itemCount: results.length,
-                          itemBuilder: (context, index) {
-                            final article = results[index];
-                            return GestureDetector(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) =>
-                                        PostDetailPage(article: article),
-                                  ),
-                                );
-                              },
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: article.urlToImage.isNotEmpty
-                                    ? (isNetworkImage(article.urlToImage)
-                                        ? Image.network(
-                                            article.urlToImage,
-                                            fit: BoxFit.cover,
-                                            headers: {
-                                              'User-Agent':
-                                                  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                                            },
-                                            errorBuilder:
-                                                (context, error, stackTrace) {
-                                              return const Icon(
-                                                  Icons.broken_image,
-                                                  size: 50,
-                                                  color: Colors.grey);
-                                            },
-                                          )
-                                        : Image.asset(
-                                            article.urlToImage,
-                                            fit: BoxFit.cover,
-                                          ))
-                                    : Container(
-                                        color: Colors.grey[300],
-                                        child:
-                                            const Icon(Icons.image, size: 40),
-                                      ),
-                              ),
-                            );
-                          },
-                        ),
+                  : NewsFeedGrid(articles: results),
             ),
           ],
         ),

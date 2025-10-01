@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:untarest_app/models/search_news.dart';
 import 'package:untarest_app/screens/auth/postdetailpage.dart';
@@ -7,7 +8,12 @@ import 'package:untarest_app/services/search_service.dart';
 import 'package:untarest_app/services/firestore_service.dart';
 import 'package:untarest_app/utils/constants.dart';
 import 'package:untarest_app/screens/profile/profile.dart';
-import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import 'package:untarest_app/utils/search_bar.dart';
+
+// Helper function to check if a URL is a network URL
+bool isNetworkImage(String url) {
+  return url.startsWith('http://') || url.startsWith('https://');
+}
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -19,18 +25,26 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
 
+  // Halaman-halaman untuk BottomNavigationBar
   late final List<Widget> _widgetOptions = <Widget>[
-    _HomeContent(),
+    const _HomeContent(), // Menggunakan const karena _HomeContent punya key sendiri
     const SearchFeatures(),
     const Center(
         child: Text('Halaman Create/Upload Placeholder',
-            style: TextStyle(color: Colors.white))),
+            style: TextStyle(color: Colors.black))),
     const ProfilePage(),
   ];
 
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
+    });
+  }
+
+  // Fungsi untuk pindah ke halaman search dari search bar
+  void _goToSearch() {
+    setState(() {
+      _selectedIndex = 1;
     });
   }
 
@@ -94,15 +108,20 @@ class _HomePageState extends State<HomePage> {
 }
 
 class _HomeContent extends StatefulWidget {
+  const _HomeContent({super.key});
+
   @override
   State<_HomeContent> createState() => _HomeContentState();
 }
 
 class _HomeContentState extends State<_HomeContent> {
+  // --- Variabel State Gabungan dari Kedua Versi ---
+  final TextEditingController _searchController = TextEditingController();
   String selectedCountry = "Indonesia";
   List<NewsArticle> allNews = [];
   bool _isLoading = true;
   final FirestoreService _firestoreService = FirestoreService();
+  // --------------------------------------------------
 
   @override
   void initState() {
@@ -120,16 +139,21 @@ class _HomeContentState extends State<_HomeContent> {
   Future<void> _loadAllNews() async {
     setState(() => _isLoading = true);
     try {
-      final data = await SearchService().searchNews("", region: selectedCountry);
-      setState(() {
-        allNews = data;
-        _isLoading = false;
-      });
+      final data =
+          await SearchService().searchNews("", region: selectedCountry);
+      if (mounted) {
+        setState(() {
+          allNews = data;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        allNews = [];
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          allNews = [];
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -185,10 +209,31 @@ class _HomeContentState extends State<_HomeContent> {
         ),
         child: CustomScrollView(
           slivers: [
+            // --- Bagian Atas: Logo, Search Bar, dan Trending Vibes ---
             SliverToBoxAdapter(
               child: Column(
                 children: [
                   const SizedBox(height: 20),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 15, top: 30, bottom: 0),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Image.asset(
+                        "assets/images/logo_UNTAREST.png",
+                        height: 35,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ),
+                  UntarestSearchBar(
+                    controller: _searchController,
+                    readOnly: true,
+                    onTap: () {
+                      final parentState =
+                          context.findAncestorStateOfType<_HomePageState>();
+                      parentState?._goToSearch();
+                    },
+                  ),
                   _TrendingVibesSection(
                     selectedCountry: selectedCountry,
                     onCountryChanged: _onCountryChanged,
@@ -196,12 +241,15 @@ class _HomeContentState extends State<_HomeContent> {
                 ],
               ),
             ),
+            // --- Bagian Bawah: Grid Konten ---
             SliverToBoxAdapter(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.95),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(25)),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(25)),
                 ),
                 child: _isLoading
                     ? const SizedBox(
@@ -233,186 +281,7 @@ class _HomeContentState extends State<_HomeContent> {
                             itemCount: allNews.length,
                             itemBuilder: (context, index) {
                               final article = allNews[index];
-                              
-                              return GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => PostDetailPage(article: article),
-                                    ),
-                                  );
-                                },
-                                child: StreamBuilder<bool>(
-                                  stream: _firestoreService.isSavedStream(article.url),
-                                  builder: (context, snapshot) {
-                                    final isSaved = snapshot.data ?? false;
-                                    
-                                    return Stack(
-                                      children: [
-                                        ClipRRect(
-                                          borderRadius: BorderRadius.circular(15),
-                                          child: article.urlToImage.isNotEmpty
-                                              ? (isNetworkImage(article.urlToImage)
-                                                  ? Image.network(
-                                                      article.urlToImage,
-                                                      fit: BoxFit.cover,
-                                                      loadingBuilder: (context, child, loadingProgress) {
-                                                        if (loadingProgress == null) return child;
-                                                        return Container(
-                                                          height: 200,
-                                                          decoration: BoxDecoration(
-                                                            color: Colors.grey[200],
-                                                            borderRadius: BorderRadius.circular(15),
-                                                          ),
-                                                          child: Center(
-                                                            child: CircularProgressIndicator(
-                                                              value: loadingProgress.expectedTotalBytes != null
-                                                                  ? loadingProgress.cumulativeBytesLoaded /
-                                                                      loadingProgress.expectedTotalBytes!
-                                                                  : null,
-                                                              color: primaryColor,
-                                                              strokeWidth: 2,
-                                                            ),
-                                                          ),
-                                                        );
-                                                      },
-                                                      headers: {
-                                                        'User-Agent':
-                                                            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                                                      },
-                                                      errorBuilder: (context, error, stackTrace) {
-                                                        return Container(
-                                                          height: 200,
-                                                          decoration: BoxDecoration(
-                                                            gradient: LinearGradient(
-                                                              colors: [
-                                                                Colors.grey[300]!,
-                                                                Colors.grey[400]!,
-                                                              ],
-                                                              begin: Alignment.topLeft,
-                                                              end: Alignment.bottomRight,
-                                                            ),
-                                                            borderRadius: BorderRadius.circular(15),
-                                                          ),
-                                                          child: Column(
-                                                            mainAxisAlignment: MainAxisAlignment.center,
-                                                            children: [
-                                                              const Icon(
-                                                                Icons.broken_image_outlined,
-                                                                size: 50,
-                                                                color: Colors.grey,
-                                                              ),
-                                                              const SizedBox(height: 8),
-                                                              Padding(
-                                                                padding: const EdgeInsets.all(8.0),
-                                                                child: Text(
-                                                                  article.content,
-                                                                  style: const TextStyle(
-                                                                    fontFamily: 'Poppins',
-                                                                    fontSize: 12,
-                                                                    color: Colors.black54,
-                                                                  ),
-                                                                  maxLines: 3,
-                                                                  overflow: TextOverflow.ellipsis,
-                                                                  textAlign: TextAlign.center,
-                                                                ),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                        );
-                                                      },
-                                                    )
-                                                  : Image.asset(
-                                                      article.urlToImage,
-                                                      fit: BoxFit.cover,
-                                                      errorBuilder: (context, error, stackTrace) {
-                                                        return Container(
-                                                          height: 200,
-                                                          color: Colors.grey[300],
-                                                          child: const Icon(
-                                                            Icons.broken_image,
-                                                            size: 50,
-                                                            color: Colors.grey,
-                                                          ),
-                                                        );
-                                                      },
-                                                    ))
-                                              : Container(
-                                                  height: 200,
-                                                  decoration: BoxDecoration(
-                                                    gradient: LinearGradient(
-                                                      colors: [
-                                                        primaryColor.withOpacity(0.3),
-                                                        primaryColor.withOpacity(0.5),
-                                                      ],
-                                                      begin: Alignment.topLeft,
-                                                      end: Alignment.bottomRight,
-                                                    ),
-                                                    borderRadius: BorderRadius.circular(15),
-                                                  ),
-                                                  child: Center(
-                                                    child: Column(
-                                                      mainAxisAlignment: MainAxisAlignment.center,
-                                                      children: [
-                                                        const Icon(
-                                                          Icons.image_outlined,
-                                                          size: 40,
-                                                          color: Colors.white,
-                                                        ),
-                                                        const SizedBox(height: 8),
-                                                        Padding(
-                                                          padding: const EdgeInsets.all(12.0),
-                                                          child: Text(
-                                                            article.content,
-                                                            style: const TextStyle(
-                                                              fontFamily: 'Poppins',
-                                                              fontSize: 12,
-                                                              color: Colors.white,
-                                                              fontWeight: FontWeight.w600,
-                                                            ),
-                                                            maxLines: 3,
-                                                            overflow: TextOverflow.ellipsis,
-                                                            textAlign: TextAlign.center,
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                ),
-                                        ),
-                                        // Save/Bookmark Button
-                                        Positioned(
-                                          top: 8,
-                                          right: 8,
-                                          child: GestureDetector(
-                                            onTap: () => _toggleSaveArticle(article),
-                                            child: Container(
-                                              padding: const EdgeInsets.all(8),
-                                              decoration: BoxDecoration(
-                                                color: Colors.white.withOpacity(0.9),
-                                                shape: BoxShape.circle,
-                                                boxShadow: [
-                                                  BoxShadow(
-                                                    color: Colors.black.withOpacity(0.2),
-                                                    blurRadius: 4,
-                                                    offset: const Offset(0, 2),
-                                                  ),
-                                                ],
-                                              ),
-                                              child: Icon(
-                                                isSaved ? Icons.bookmark : Icons.bookmark_border,
-                                                color: isSaved ? primaryColor : Colors.grey[700],
-                                                size: 20,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                ),
-                              );
+                              return buildArticleCard(article);
                             },
                           ),
               ),
@@ -422,9 +291,182 @@ class _HomeContentState extends State<_HomeContent> {
       ),
     );
   }
+
+  Widget buildArticleCard(NewsArticle article) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PostDetailPage(article: article),
+          ),
+        );
+      },
+      child: StreamBuilder<bool>(
+        stream: _firestoreService.isSavedStream(article.url),
+        builder: (context, snapshot) {
+          final isSaved = snapshot.data ?? false;
+
+          return Stack(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(15),
+                child: article.urlToImage.isNotEmpty
+                    ? (isNetworkImage(article.urlToImage)
+                        ? Image.network(
+                            article.urlToImage,
+                            fit: BoxFit.cover,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Container(
+                                height: 200,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[200],
+                                  borderRadius: BorderRadius.circular(15),
+                                ),
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    value: loadingProgress.expectedTotalBytes !=
+                                            null
+                                        ? loadingProgress.cumulativeBytesLoaded /
+                                            loadingProgress.expectedTotalBytes!
+                                        : null,
+                                    color: primaryColor,
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              );
+                            },
+                            headers: {
+                              'User-Agent':
+                                  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                            },
+                            errorBuilder: (context, error, stackTrace) {
+                              return buildErrorImagePlaceholder(article);
+                            },
+                          )
+                        : Image.asset(
+                            article.urlToImage,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return buildErrorImagePlaceholder(article);
+                            },
+                          ))
+                    : buildNoImagePlaceholder(article),
+              ),
+              // Tombol Save/Bookmark
+              Positioned(
+                top: 8,
+                right: 8,
+                child: GestureDetector(
+                  onTap: () => _toggleSaveArticle(article),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.9),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      isSaved ? Icons.bookmark : Icons.bookmark_border,
+                      color: isSaved ? primaryColor : Colors.grey[700],
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget buildNoImagePlaceholder(NewsArticle article) {
+    return Container(
+      height: 200,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            primaryColor.withOpacity(0.3),
+            primaryColor.withOpacity(0.5),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.image_outlined, size: 40, color: Colors.white),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Text(
+                article.content,
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 12,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget buildErrorImagePlaceholder(NewsArticle article) {
+    return Container(
+      height: 200,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.grey[300]!, Colors.grey[400]!],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.broken_image_outlined, size: 50, color: Colors.grey),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              article.content,
+              style: const TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 12,
+                color: Colors.black54,
+              ),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-class _TrendingVibesSection extends StatefulWidget {
+
+class _TrendingVibesSection extends StatelessWidget {
   final String selectedCountry;
   final Function(String) onCountryChanged;
 
@@ -434,27 +476,11 @@ class _TrendingVibesSection extends StatefulWidget {
   });
 
   @override
-  State<_TrendingVibesSection> createState() => _TrendingVibesSectionState();
-}
-
-class _TrendingVibesSectionState extends State<_TrendingVibesSection> {
-  final List<String> countries = [
-    'Indonesia',
-    'USA',
-    'Japan',
-    'South Korea',
-    'China',
-    'France',
-    'UK',
-    'Global',
-  ];
-
-  @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 30),
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 4),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
         decoration: BoxDecoration(
           color: Colors.white.withOpacity(0.8),
           borderRadius: BorderRadius.circular(12),
@@ -464,16 +490,11 @@ class _TrendingVibesSectionState extends State<_TrendingVibesSection> {
           ),
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // --- Kiri: Logo + TrendingVibes ---
             Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Image.asset(
-                  'assets/images/trendup.png',
-                  width: 30,
-                  height: 30,
-                ),
+                Image.asset('assets/images/trendup.png', width: 30, height: 30),
                 const SizedBox(width: 8),
                 SizedBox(
                   height: 28,
@@ -485,28 +506,19 @@ class _TrendingVibesSectionState extends State<_TrendingVibesSection> {
                 ),
               ],
             ),
-
-            // --- Kanan: Region filter ---
-            Row(
-              children: [
-                Text(
-                  widget.selectedCountry,
-                  style: const TextStyle(
-                      fontFamily: 'Poppins',
-                      fontWeight: FontWeight.bold,
-                      color: Color.fromARGB(221, 168, 0, 0),
-                      fontSize: 15),
-                ),
-                IconButton(
-                  icon:
-                      const Icon(Icons.arrow_drop_down, color: Colors.black87),
-                  onPressed: () {
-                    _showCountryPicker(context, countries, (country) {
-                      widget.onCountryChanged(country);
-                    });
-                  },
-                ),
-              ],
+            const Spacer(),
+            IconButton(
+              constraints: const BoxConstraints(),
+              padding: EdgeInsets.zero,
+              icon: const Icon(Icons.arrow_drop_down, color: Colors.black87),
+              onPressed: () {
+                _showCountryPicker(context, [
+                  'Indonesia', 'USA', 'Japan', 'South Korea', 'China', 'France',
+                  'UK', 'Global',
+                ], (country) {
+                  onCountryChanged(country);
+                });
+              },
             ),
           ],
         ),

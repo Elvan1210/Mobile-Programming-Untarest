@@ -30,6 +30,8 @@ class _FacultySelectionPageState extends State<FacultySelectionPage> {
     'FTI - Fakultas Teknologi Informasi',
     'FH - Fakultas Hukum',
     'FISIP - Fakultas Ilmu Sosial dan Ilmu Politik',
+    'FIKOM - Fakultas Ilmu Komunikasi',
+    'FT - Fakultas Teknik'
   ];
 
   void _register() async {
@@ -50,40 +52,61 @@ class _FacultySelectionPageState extends State<FacultySelectionPage> {
         widget.password,
       );
 
-      if (user != null && mounted) {
-        // TODO: Save faculty to Firestore user profile here
-        // Example:
-        // await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-        //   'email': widget.email,
-        //   'faculty': _selectedFaculty,
-        //   'createdAt': FieldValue.serverTimestamp(),
-        // });
+      if (!mounted) return;
 
+      if (user != null) {
+        // TODO: Save faculty to Firestore user profile here
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const HomePage()),
         );
       }
     } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+
       String message = 'Registration failed. Please try again.';
-      if (e.code == 'email-already-in-use') {
-        message = 'The email address is already in use by another account.';
-      } else if (e.code == 'weak-password') {
-        message = 'The password provided is too weak.';
-      } else if (e.code == 'invalid-email') {
-        message = 'The email address is not valid.';
+
+      print('FirebaseAuthException code: ${e.code}'); // Debug log
+      print('FirebaseAuthException message: ${e.message}'); // Debug log
+
+      switch (e.code) {
+        case 'email-already-in-use':
+          message = 'This email has already been registered.';
+          break;
+        case 'weak-password':
+          message = 'The password provided is too weak.';
+          break;
+        case 'invalid-email':
+          message = 'The email address is not valid.';
+          break;
+        case 'operation-not-allowed':
+          message = 'Email/password accounts are not enabled.';
+          break;
+        default:
+          message = 'Registration failed: ${e.message ?? e.code}';
       }
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message)),
-        );
-      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: const Color.fromARGB(255, 130, 6, 6),
+          duration: const Duration(seconds: 4),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('An unexpected error occurred.')),
-        );
-      }
+      if (!mounted) return;
+
+      print('Unexpected error: $e'); // Debug log
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('An unexpected error occurred: $e'),
+          backgroundColor: const Color.fromARGB(255, 110, 5, 5),
+          duration: const Duration(seconds: 4),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -145,15 +168,13 @@ class _FacultySelectionPageState extends State<FacultySelectionPage> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             // Logo
-                            const Text(
-                              'untarest',
-                              style: TextStyle(
-                                fontSize: 48,
-                                fontWeight: FontWeight.bold,
-                                color: primaryColor,
+                            Center(
+                              child: Image.asset(
+                                "assets/images/logo_UNTARESTBIG.png",
+                                height: 100,
                               ),
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 5),
                             const Text(
                               'Choose your Faculty',
                               style: TextStyle(
@@ -166,7 +187,8 @@ class _FacultySelectionPageState extends State<FacultySelectionPage> {
 
                             // Faculty Dropdown
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 12.0),
                               decoration: BoxDecoration(
                                 color: Colors.grey[100],
                                 borderRadius: BorderRadius.circular(10.0),
@@ -177,7 +199,8 @@ class _FacultySelectionPageState extends State<FacultySelectionPage> {
                                   isExpanded: true,
                                   value: _selectedFaculty,
                                   hint: const Text('Select Faculty'),
-                                  icon: const Icon(Icons.arrow_drop_down, color: primaryColor),
+                                  icon: const Icon(Icons.arrow_drop_down,
+                                      color: primaryColor),
                                   items: _faculties.map((String faculty) {
                                     return DropdownMenuItem<String>(
                                       value: faculty,
@@ -205,7 +228,8 @@ class _FacultySelectionPageState extends State<FacultySelectionPage> {
                                 onPressed: _isLoading ? null : _register,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: primaryColor,
-                                  disabledBackgroundColor: primaryColor.withOpacity(0.6),
+                                  disabledBackgroundColor:
+                                      primaryColor.withOpacity(0.6),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(10),
                                   ),
