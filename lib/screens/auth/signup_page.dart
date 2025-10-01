@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:untarest_app/screens/auth/login_page.dart';
 import 'package:untarest_app/screens/auth/faculty_selection_page.dart';
 import 'package:untarest_app/utils/constants.dart';
+import 'login_signup_toggle.dart'; // toggle yang kita buat
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
@@ -23,6 +24,16 @@ class _SignupPageState extends State<SignupPage> {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  void _navigateWithFade(BuildContext context, Widget page) {
+    Navigator.of(context).pushReplacement(PageRouteBuilder(
+      transitionDuration: const Duration(milliseconds: 400),
+      pageBuilder: (_, __, ___) => page,
+      transitionsBuilder: (_, animation, __, child) {
+        return FadeTransition(opacity: animation, child: child);
+      },
+    ));
   }
 
   void _validateAndNavigate() {
@@ -77,6 +88,25 @@ class _SignupPageState extends State<SignupPage> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    Center(
+                      child: Image.asset(
+                        "assets/images/logo_UNTARESTBIG.png",
+                        height: 100,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // TOGGLE Login dan Signup
+                    LoginSignupToggle(
+                      isLogin: false,
+                      onLoginTap: () {
+                        _navigateWithFade(context, const LoginPage());
+                      },
+                      onSignupTap: () {}, // tetap di signup
+                    ),
+                    const SizedBox(height: 20),
+
                     // White container for form
                     Container(
                       padding: const EdgeInsets.all(24),
@@ -86,49 +116,42 @@ class _SignupPageState extends State<SignupPage> {
                       ),
                       child: Column(
                         children: [
-                          // Logo
-                          const Text(
-                            'untarest',
-                            style: TextStyle(
-                              fontSize: 48,
-                              fontWeight: FontWeight.bold,
-                              color: primaryColor,
-                            ),
-                          ),
-                          const SizedBox(height: 32),
-                          
                           // Email Field
                           TextField(
                             controller: _emailController,
                             keyboardType: TextInputType.emailAddress,
                             decoration: InputDecoration(
                               hintText: 'Enter your email',
-                              prefixIcon: const Icon(Icons.email, color: primaryColor),
+                              prefixIcon:
+                                  const Icon(Icons.email, color: primaryColor),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
-                                borderSide: const BorderSide(color: primaryColor),
+                                borderSide:
+                                    const BorderSide(color: primaryColor),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
-                                borderSide: BorderSide(color: Colors.grey[300]!),
+                                borderSide: BorderSide(color: Colors.grey),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
-                                borderSide: const BorderSide(color: primaryColor, width: 2),
+                                borderSide: const BorderSide(
+                                    color: primaryColor, width: 2),
                               ),
                               filled: true,
                               fillColor: Colors.grey[100],
                             ),
                           ),
                           const SizedBox(height: 16),
-                          
+
                           // Password Field
                           TextField(
                             controller: _passwordController,
                             obscureText: _obscurePassword,
                             decoration: InputDecoration(
                               hintText: 'Enter your password',
-                              prefixIcon: const Icon(Icons.lock, color: primaryColor),
+                              prefixIcon:
+                                  const Icon(Icons.lock, color: primaryColor),
                               suffixIcon: IconButton(
                                 icon: Icon(
                                   _obscurePassword
@@ -144,29 +167,32 @@ class _SignupPageState extends State<SignupPage> {
                               ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
-                                borderSide: const BorderSide(color: primaryColor),
+                                borderSide:
+                                    const BorderSide(color: primaryColor),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
-                                borderSide: BorderSide(color: Colors.grey[300]!),
+                                borderSide: BorderSide(color: Colors.grey),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
-                                borderSide: const BorderSide(color: primaryColor, width: 2),
+                                borderSide: const BorderSide(
+                                    color: primaryColor, width: 2),
                               ),
                               filled: true,
                               fillColor: Colors.grey[100],
                             ),
                           ),
                           const SizedBox(height: 16),
-                          
+
                           // Confirm Password Field
                           TextField(
                             controller: _confirmPasswordController,
                             obscureText: _obscureConfirmPassword,
                             decoration: InputDecoration(
                               hintText: 'Confirm your password',
-                              prefixIcon: const Icon(Icons.lock, color: primaryColor),
+                              prefixIcon:
+                                  const Icon(Icons.lock, color: primaryColor),
                               suffixIcon: IconButton(
                                 icon: Icon(
                                   _obscureConfirmPassword
@@ -176,28 +202,31 @@ class _SignupPageState extends State<SignupPage> {
                                 ),
                                 onPressed: () {
                                   setState(() {
-                                    _obscureConfirmPassword = !_obscureConfirmPassword;
+                                    _obscureConfirmPassword =
+                                        !_obscureConfirmPassword;
                                   });
                                 },
                               ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
-                                borderSide: const BorderSide(color: primaryColor),
+                                borderSide:
+                                    const BorderSide(color: primaryColor),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
-                                borderSide: BorderSide(color: Colors.grey[300]!),
+                                borderSide: BorderSide(color: Colors.grey),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
-                                borderSide: const BorderSide(color: primaryColor, width: 2),
+                                borderSide: const BorderSide(
+                                    color: primaryColor, width: 2),
                               ),
                               filled: true,
                               fillColor: Colors.grey[100],
                             ),
                           ),
                           const SizedBox(height: 24),
-                          
+
                           // Next Button
                           SizedBox(
                             width: double.infinity,
@@ -217,26 +246,6 @@ class _SignupPageState extends State<SignupPage> {
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white,
                                 ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          
-                          // Login Link
-                          TextButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const LoginPage(),
-                                ),
-                              );
-                            },
-                            child: const Text(
-                              'Already have an account? Login',
-                              style: TextStyle(
-                                color: primaryColor,
-                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
