@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:untarest_app/models/search_news.dart';
 import 'package:untarest_app/screens/auth/postdetailpage.dart';
 import 'package:untarest_app/screens/home/search_features.dart';
 import 'package:untarest_app/services/search_service.dart';
+import 'package:untarest_app/services/firestore_service.dart';
 import 'package:untarest_app/utils/constants.dart';
 import 'package:untarest_app/screens/profile/profile.dart';
 import 'package:untarest_app/utils/search_bar.dart';
-import 'package:untarest_app/widgets/news_feed_grid.dart';
+
+// Helper function to check if a URL is a network URL
+bool isNetworkImage(String url) {
+  return url.startsWith('http://') || url.startsWith('https://');
+}
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -19,12 +25,13 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
 
+  // Halaman-halaman untuk BottomNavigationBar
   late final List<Widget> _widgetOptions = <Widget>[
-    _HomeContent(),
+    const _HomeContent(), // Menggunakan const karena _HomeContent punya key sendiri
     const SearchFeatures(),
     const Center(
         child: Text('Halaman Create/Upload Placeholder',
-            style: TextStyle(color: Colors.white))),
+            style: TextStyle(color: Colors.black))),
     const ProfilePage(),
   ];
 
@@ -34,6 +41,7 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  // Fungsi untuk pindah ke halaman search dari search bar
   void _goToSearch() {
     setState(() {
       _selectedIndex = 1;
@@ -100,144 +108,369 @@ class _HomePageState extends State<HomePage> {
 }
 
 class _HomeContent extends StatefulWidget {
+  const _HomeContent({super.key});
+
   @override
   State<_HomeContent> createState() => _HomeContentState();
 }
 
 class _HomeContentState extends State<_HomeContent> {
+  // --- Variabel State Gabungan dari Kedua Versi ---
   final TextEditingController _searchController = TextEditingController();
-  String selectedCountry = "Indonesia"; // default
+  String selectedCountry = "Indonesia";
+  List<NewsArticle> allNews = [];
+  bool _isLoading = true;
+  final FirestoreService _firestoreService = FirestoreService();
+  // --------------------------------------------------
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAllNews();
+  }
 
   void _onCountryChanged(String country) {
     setState(() {
       selectedCountry = country;
     });
+    _loadAllNews();
+  }
+
+  Future<void> _loadAllNews() async {
+    setState(() => _isLoading = true);
+    try {
+      final data =
+          await SearchService().searchNews("", region: selectedCountry);
+      if (mounted) {
+        setState(() {
+          allNews = data;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          allNews = [];
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _toggleSaveArticle(NewsArticle article) async {
+    try {
+      final isSaved = await _firestoreService.isSaved(article.url);
+      await _firestoreService.toggleSave(
+        article.url,
+        article.urlToImage,
+        article.content,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              isSaved ? 'Dihapus dari simpanan' : '🔖 Disimpan!',
+              style: const TextStyle(fontFamily: 'Poppins'),
+            ),
+            duration: const Duration(milliseconds: 1500),
+            backgroundColor: primaryColor,
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        body: Container(
-            width: double.infinity,
-            height: double.infinity,
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage("assets/images/BG_UNTAR.png"),
-                fit: BoxFit.cover,
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage("assets/images/BG_UNTAR.png"),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: CustomScrollView(
+          slivers: [
+            // --- Bagian Atas: Logo, Search Bar, dan Trending Vibes ---
+            SliverToBoxAdapter(
+              child: Column(
+                children: [
+                  const SizedBox(height: 20),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 15, top: 30, bottom: 0),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Image.asset(
+                        "assets/images/logo_UNTAREST.png",
+                        height: 35,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ),
+                  UntarestSearchBar(
+                    controller: _searchController,
+                    readOnly: true,
+                    onTap: () {
+                      final parentState =
+                          context.findAncestorStateOfType<_HomePageState>();
+                      parentState?._goToSearch();
+                    },
+                  ),
+                  _TrendingVibesSection(
+                    selectedCountry: selectedCountry,
+                    onCountryChanged: _onCountryChanged,
+                  ),
+                ],
               ),
             ),
-            child: SingleChildScrollView(
-                child: Column(
-              children: [
-                const SizedBox(height: 20),
+            // --- Bagian Bawah: Grid Konten ---
+            SliverToBoxAdapter(
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.95),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(25)),
+                ),
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 400,
+                        child: Center(
+                          child: CircularProgressIndicator(color: primaryColor),
+                        ),
+                      )
+                    : allNews.isEmpty
+                        ? const SizedBox(
+                            height: 400,
+                            child: Center(
+                              child: Text(
+                                "Tidak ada konten saat ini.",
+                                style: TextStyle(
+                                  fontFamily: "Poppins",
+                                  fontSize: 16,
+                                  color: Colors.black54,
+                                ),
+                              ),
+                            ),
+                          )
+                        : MasonryGridView.count(
+                            crossAxisCount: 2,
+                            mainAxisSpacing: 12,
+                            crossAxisSpacing: 12,
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: allNews.length,
+                            itemBuilder: (context, index) {
+                              final article = allNews[index];
+                              return buildArticleCard(article);
+                            },
+                          ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-                //LOGO UNTAREST
-                Padding(
-                  padding: const EdgeInsets.only(left: 0, top: 30, bottom: 0),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Image.asset(
-                      "assets/images/logo_UNTAREST.png",
-                      height: 35,
-                      fit: BoxFit.contain,
+  Widget buildArticleCard(NewsArticle article) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PostDetailPage(article: article),
+          ),
+        );
+      },
+      child: StreamBuilder<bool>(
+        stream: _firestoreService.isSavedStream(article.url),
+        builder: (context, snapshot) {
+          final isSaved = snapshot.data ?? false;
+
+          return Stack(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(15),
+                child: article.urlToImage.isNotEmpty
+                    ? (isNetworkImage(article.urlToImage)
+                        ? Image.network(
+                            article.urlToImage,
+                            fit: BoxFit.cover,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Container(
+                                height: 200,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[200],
+                                  borderRadius: BorderRadius.circular(15),
+                                ),
+                                child: Center(
+                                  child: CircularProgressIndicator(
+                                    value: loadingProgress.expectedTotalBytes !=
+                                            null
+                                        ? loadingProgress.cumulativeBytesLoaded /
+                                            loadingProgress.expectedTotalBytes!
+                                        : null,
+                                    color: primaryColor,
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              );
+                            },
+                            headers: {
+                              'User-Agent':
+                                  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                            },
+                            errorBuilder: (context, error, stackTrace) {
+                              return buildErrorImagePlaceholder(article);
+                            },
+                          )
+                        : Image.asset(
+                            article.urlToImage,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return buildErrorImagePlaceholder(article);
+                            },
+                          ))
+                    : buildNoImagePlaceholder(article),
+              ),
+              // Tombol Save/Bookmark
+              Positioned(
+                top: 8,
+                right: 8,
+                child: GestureDetector(
+                  onTap: () => _toggleSaveArticle(article),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.9),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      isSaved ? Icons.bookmark : Icons.bookmark_border,
+                      color: isSaved ? primaryColor : Colors.grey[700],
+                      size: 20,
                     ),
                   ),
                 ),
-
-                UntarestSearchBar(
-                  controller: _searchController,
-                  readOnly: true,
-                  onTap: () {
-                    final parentState =
-                        context.findAncestorStateOfType<_HomePageState>();
-                    parentState?._goToSearch();
-                  },
-                ),
-
-                const SizedBox(height: 0), // jangan kasih jarak
-
-                _TrendingVibesSection(
-                  selectedCountry: selectedCountry,
-                  onCountryChanged: _onCountryChanged,
-                ),
-
-                //FEEDS
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 0), // vertical=0
-                  child: FutureBuilder<List<NewsArticle>>(
-                    future:
-                        SearchService().searchNews("", region: selectedCountry),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      } else if (snapshot.hasError) {
-                        return const Text("Gagal memuat post trending");
-                      } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                        return const Text("Belum ada trending vibes di sini");
-                      }
-
-                      final trendingPosts = snapshot.data!
-                          .where((a) => a.isTrending == true)
-                          .toList();
-
-                      return NewsFeedGrid(articles: trendingPosts);
-                    },
-                  ),
-                ),
-              ],
-            ))));
+              ),
+            ],
+          );
+        },
+      ),
+    );
   }
-}
 
-class _PhotoCard extends StatelessWidget {
-  final String imageUrl;
-
-  const _PhotoCard({Key? key, required this.imageUrl}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
+  Widget buildNoImagePlaceholder(NewsArticle article) {
     return Container(
+      height: 200,
       decoration: BoxDecoration(
-        color: Colors.white,
+        gradient: LinearGradient(
+          colors: [
+            primaryColor.withOpacity(0.3),
+            primaryColor.withOpacity(0.5),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.3),
-            spreadRadius: 2,
-            blurRadius: 5,
-            offset: const Offset(0, 3),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.image_outlined, size: 40, color: Colors.white),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: Text(
+                article.content,
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 12,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget buildErrorImagePlaceholder(NewsArticle article) {
+    return Container(
+      height: 200,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.grey[300]!, Colors.grey[400]!],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.broken_image_outlined, size: 50, color: Colors.grey),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              article.content,
+              style: const TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 12,
+                color: Colors.black54,
+              ),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+            ),
           ),
         ],
-      ),
-      child: ClipRRect(
-        borderRadius: const BorderRadius.all(Radius.circular(15)),
-        child: imageUrl.isNotEmpty
-            ? (isNetworkImage(imageUrl)
-                ? Image.network(
-                    imageUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(Icons.broken_image,
-                          size: 50, color: Colors.grey);
-                    },
-                  )
-                : Image.asset(imageUrl, fit: BoxFit.cover))
-            : Container(
-                color: Colors.grey[300],
-                child: const Icon(Icons.image, size: 40),
-              ),
       ),
     );
   }
 }
+
 
 class _TrendingVibesSection extends StatelessWidget {
   final String selectedCountry;
   final Function(String) onCountryChanged;
 
   const _TrendingVibesSection({
-    super.key,
     required this.selectedCountry,
     required this.onCountryChanged,
   });
@@ -258,15 +491,10 @@ class _TrendingVibesSection extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // --- Kiri: Logo + TrendingVibes ---
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Image.asset(
-                  'assets/images/trendup.png',
-                  width: 30,
-                  height: 30,
-                ),
+                Image.asset('assets/images/trendup.png', width: 30, height: 30),
                 const SizedBox(width: 8),
                 SizedBox(
                   height: 28,
@@ -278,24 +506,15 @@ class _TrendingVibesSection extends StatelessWidget {
                 ),
               ],
             ),
-
             const Spacer(),
-
-            // --- Kanan: Dropdown icon aja ---
             IconButton(
               constraints: const BoxConstraints(),
               padding: EdgeInsets.zero,
               icon: const Icon(Icons.arrow_drop_down, color: Colors.black87),
               onPressed: () {
                 _showCountryPicker(context, [
-                  'Indonesia',
-                  'USA',
-                  'Japan',
-                  'South Korea',
-                  'China',
-                  'France',
-                  'UK',
-                  'Global',
+                  'Indonesia', 'USA', 'Japan', 'South Korea', 'China', 'France',
+                  'UK', 'Global',
                 ], (country) {
                   onCountryChanged(country);
                 });
@@ -306,108 +525,6 @@ class _TrendingVibesSection extends StatelessWidget {
       ),
     );
   }
-}
-
-class _TrendingCard extends StatelessWidget {
-  final NewsArticle article;
-
-  const _TrendingCard({required this.article});
-
-  @override
-  Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-
-    return Container(
-      // max 250px biar gak kegedean, min 180px biar tetap kebaca
-      width: screenWidth < 400 ? screenWidth * 0.8 : 250,
-      margin: const EdgeInsets.only(right: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            spreadRadius: 1,
-            blurRadius: 5,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Bagian gambar
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-            child: article.urlToImage.isNotEmpty
-                ? (isNetworkImage(article.urlToImage)
-                    ? Image.network(
-                        article.urlToImage,
-                        height: 100,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        headers: {
-                          'User-Agent':
-                              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                        },
-                        errorBuilder: (context, error, stackTrace) {
-                          return const Icon(Icons.broken_image,
-                              size: 50, color: Colors.grey);
-                        },
-                      )
-                    : Image.asset(
-                        article.urlToImage,
-                        height: 100,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                      ))
-                : Container(
-                    height: 100,
-                    color: Colors.grey[300],
-                    child: const Icon(Icons.image, size: 40),
-                  ),
-          ),
-
-          // Bagian text
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Text(
-              article.content,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-                fontFamily: "Poppins",
-                color: Colors.black87,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// Trending Vibes Widget
-Widget trendingVibes(List<NewsArticle> articles) {
-  final trending = articles.where((a) => a.isTrending == true).take(4).toList();
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      const Text("TRENDING VIBES!",
-          style: TextStyle(
-              fontWeight: FontWeight.bold, fontSize: 18, color: Colors.red)),
-      ...trending.map((article) => ListTile(
-            leading: article.urlToImage.isNotEmpty
-                ? Image.asset(article.urlToImage,
-                    width: 40, height: 40, fit: BoxFit.cover)
-                : const Icon(Icons.trending_up),
-            title: Text(article.content),
-            subtitle: Text(article.content),
-          )),
-    ],
-  );
 }
 
 void _showCountryPicker(
@@ -437,7 +554,7 @@ void _showCountryPicker(
                   onChanged: (val) => setState(() => filter = val),
                 ),
                 SizedBox(
-                  height: 180, // 3 items * 60px each
+                  height: 180,
                   child: ListView.builder(
                     itemCount: filtered.length,
                     itemExtent: 60,
