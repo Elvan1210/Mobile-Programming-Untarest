@@ -15,7 +15,8 @@ class SearchService {
     final List articles = data['articles'] ?? [];
     return articles.map((json) => NewsArticle.fromJson(json)).where((article) {
       final matchesQuery = query.isEmpty ||
-          (article.content.toLowerCase().contains(query.toLowerCase()));
+          (article.content.toLowerCase().contains(query.toLowerCase())) ||
+          (article.title.toLowerCase().contains(query.toLowerCase()));
       final matchesRegion = region == "all" ||
           (article.region?.toLowerCase() == region.toLowerCase());
       return matchesQuery && matchesRegion;

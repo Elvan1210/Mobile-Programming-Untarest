@@ -9,11 +9,13 @@ class NewsArticle {
   final String? region;
   final bool isTrending;
   final bool isMeme;
+  final String title;
 
   NewsArticle({
     required this.urlToImage,
     required this.url,
     required this.content,
+    required this.title,
     required this.region,
     this.isTrending = false,
     this.isMeme = false,
@@ -27,6 +29,7 @@ class NewsArticle {
       region: json['region'],
       isTrending: json['isTrending'] ?? false,
       isMeme: json['isMeme'] ?? false,
+      title: json['title'] ?? '',
     );
   }
 
@@ -39,6 +42,7 @@ class NewsArticle {
       region: region,
       isTrending: false,
       isMeme: false,
+      title: json['title'] ?? '',
     );
   }
 }

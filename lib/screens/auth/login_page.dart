@@ -4,6 +4,7 @@ import 'package:untarest_app/screens/home/home_page.dart';
 import 'package:untarest_app/services/auth_service.dart';
 import 'package:untarest_app/utils/custom_widgets.dart';
 import 'package:untarest_app/utils/constants.dart';
+import 'login_signup_toggle.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -53,16 +54,25 @@ class _LoginPageState extends State<LoginPage> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                const Text(
-                  'untarest',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 48,
-                    fontWeight: FontWeight.bold,
-                    color: primaryColor,
+                Center(
+                  child: Image.asset(
+                    "assets/images/logo_UNTARESTBIG.png",
+                    height: 100,
+                    fit: BoxFit.contain,
                   ),
                 ),
-                const SizedBox(height: 50),
+                const SizedBox(height: 0),
+
+                //TOGGLE
+                LoginSignupToggle(
+                  isLogin: true,
+                  onLoginTap: () {},
+                  onSignupTap: () {
+                    _navigateWithFade(context, const SignupPage());
+                  },
+                ),
+
+                const SizedBox(height: 20),
                 CustomTextField(
                   controller: _emailController,
                   hintText: 'Enter your email',
@@ -75,7 +85,7 @@ class _LoginPageState extends State<LoginPage> {
                   icon: Icons.lock,
                 ),
                 CustomButton(text: 'Login', onPressed: _login),
-                const SizedBox(height: 20),
+                const SizedBox(height: 10),
                 TextButton(
                   onPressed: () {
                     Navigator.push(
@@ -97,4 +107,14 @@ class _LoginPageState extends State<LoginPage> {
       ),
     );
   }
+}
+
+void _navigateWithFade(BuildContext context, Widget page) {
+  Navigator.of(context).pushReplacement(PageRouteBuilder(
+    transitionDuration: const Duration(milliseconds: 400),
+    pageBuilder: (_, __, ___) => page,
+    transitionsBuilder: (_, animation, __, child) {
+      return FadeTransition(opacity: animation, child: child);
+    },
+  ));
 }

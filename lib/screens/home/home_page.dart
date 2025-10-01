@@ -6,7 +6,8 @@ import 'package:untarest_app/screens/home/search_features.dart';
 import 'package:untarest_app/services/search_service.dart';
 import 'package:untarest_app/utils/constants.dart';
 import 'package:untarest_app/screens/profile/profile.dart';
-import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import 'package:untarest_app/utils/search_bar.dart';
+import 'package:untarest_app/widgets/news_feed_grid.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -30,6 +31,12 @@ class _HomePageState extends State<HomePage> {
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
+    });
+  }
+
+  void _goToSearch() {
+    setState(() {
+      _selectedIndex = 1;
     });
   }
 
@@ -98,6 +105,7 @@ class _HomeContent extends StatefulWidget {
 }
 
 class _HomeContentState extends State<_HomeContent> {
+  final TextEditingController _searchController = TextEditingController();
   String selectedCountry = "Indonesia"; // default
 
   void _onCountryChanged(String country) {
@@ -109,77 +117,76 @@ class _HomeContentState extends State<_HomeContent> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage("assets/images/BG_UNTAR.png"),
-            fit: BoxFit.cover,
-          ),
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              const SizedBox(height: 20),
-              _TrendingVibesSection(
-                selectedCountry: selectedCountry,
-                onCountryChanged: _onCountryChanged,
+        body: Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: const BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage("assets/images/BG_UNTAR.png"),
+                fit: BoxFit.cover,
               ),
-              const SizedBox(height: 5),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                child: FutureBuilder<List<NewsArticle>>(
-                  future:
-                      SearchService().searchNews("", region: selectedCountry),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    } else if (snapshot.hasError) {
-                      return const Text("Gagal memuat post trending");
-                    } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                      return const Text("Belum ada trending vibes di sini");
-                    }
+            ),
+            child: SingleChildScrollView(
+                child: Column(
+              children: [
+                const SizedBox(height: 20),
 
-                    final trendingPosts = snapshot.data!
-                        .where((a) => a.isTrending == true)
-                        .toList();
+                //LOGO UNTAREST
+                Padding(
+                  padding: const EdgeInsets.only(left: 0, top: 30, bottom: 0),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Image.asset(
+                      "assets/images/logo_UNTAREST.png",
+                      height: 35,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
 
-                    return GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                        childAspectRatio: 0.7,
-                      ),
-                      itemCount: trendingPosts.length,
-                      itemBuilder: (context, index) {
-                        final post = trendingPosts[index];
-                        return GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => PostDetailPage(article: post),
-                              ),
-                            );
-                          },
-                          child: _PhotoCard(imageUrl: post.urlToImage),
-                        );
-                      },
-                    );
+                UntarestSearchBar(
+                  controller: _searchController,
+                  readOnly: true,
+                  onTap: () {
+                    final parentState =
+                        context.findAncestorStateOfType<_HomePageState>();
+                    parentState?._goToSearch();
                   },
                 ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+
+                const SizedBox(height: 0), // jangan kasih jarak
+
+                _TrendingVibesSection(
+                  selectedCountry: selectedCountry,
+                  onCountryChanged: _onCountryChanged,
+                ),
+
+                //FEEDS
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 0), // vertical=0
+                  child: FutureBuilder<List<NewsArticle>>(
+                    future:
+                        SearchService().searchNews("", region: selectedCountry),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      } else if (snapshot.hasError) {
+                        return const Text("Gagal memuat post trending");
+                      } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                        return const Text("Belum ada trending vibes di sini");
+                      }
+
+                      final trendingPosts = snapshot.data!
+                          .where((a) => a.isTrending == true)
+                          .toList();
+
+                      return NewsFeedGrid(articles: trendingPosts);
+                    },
+                  ),
+                ),
+              ],
+            ))));
   }
 }
 
@@ -225,7 +232,7 @@ class _PhotoCard extends StatelessWidget {
   }
 }
 
-class _TrendingVibesSection extends StatefulWidget {
+class _TrendingVibesSection extends StatelessWidget {
   final String selectedCountry;
   final Function(String) onCountryChanged;
 
@@ -236,27 +243,11 @@ class _TrendingVibesSection extends StatefulWidget {
   });
 
   @override
-  State<_TrendingVibesSection> createState() => _TrendingVibesSectionState();
-}
-
-class _TrendingVibesSectionState extends State<_TrendingVibesSection> {
-  final List<String> countries = [
-    'Indonesia',
-    'USA',
-    'Japan',
-    'South Korea',
-    'China',
-    'France',
-    'UK',
-    'Global',
-  ];
-
-  @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 30),
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 4),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
         decoration: BoxDecoration(
           color: Colors.white.withOpacity(0.8),
           borderRadius: BorderRadius.circular(12),
@@ -266,10 +257,10 @@ class _TrendingVibesSectionState extends State<_TrendingVibesSection> {
           ),
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             // --- Kiri: Logo + TrendingVibes ---
             Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Image.asset(
                   'assets/images/trendup.png',
@@ -288,27 +279,27 @@ class _TrendingVibesSectionState extends State<_TrendingVibesSection> {
               ],
             ),
 
-            // --- Kanan: Region filter ---
-            Row(
-              children: [
-                Text(
-                  widget.selectedCountry,
-                  style: const TextStyle(
-                      fontFamily: 'Poppins',
-                      fontWeight: FontWeight.bold,
-                      color: Color.fromARGB(221, 168, 0, 0),
-                      fontSize: 15),
-                ),
-                IconButton(
-                  icon:
-                      const Icon(Icons.arrow_drop_down, color: Colors.black87),
-                  onPressed: () {
-                    _showCountryPicker(context, countries, (country) {
-                      widget.onCountryChanged(country);
-                    });
-                  },
-                ),
-              ],
+            const Spacer(),
+
+            // --- Kanan: Dropdown icon aja ---
+            IconButton(
+              constraints: const BoxConstraints(),
+              padding: EdgeInsets.zero,
+              icon: const Icon(Icons.arrow_drop_down, color: Colors.black87),
+              onPressed: () {
+                _showCountryPicker(context, [
+                  'Indonesia',
+                  'USA',
+                  'Japan',
+                  'South Korea',
+                  'China',
+                  'France',
+                  'UK',
+                  'Global',
+                ], (country) {
+                  onCountryChanged(country);
+                });
+              },
             ),
           ],
         ),
@@ -419,7 +410,6 @@ Widget trendingVibes(List<NewsArticle> articles) {
   );
 }
 
-//last edited-eln
 void _showCountryPicker(
     BuildContext context, List<String> countries, Function(String) onSelected) {
   showModalBottomSheet(
