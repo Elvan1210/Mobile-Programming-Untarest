@@ -175,10 +175,15 @@ class _SearchFeaturesState extends State<SearchFeatures> {
                                             article.urlToImage,
                                             fit: BoxFit.cover,
                                             headers: {
-                                              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                                              'User-Agent':
+                                                  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                                             },
-                                            errorBuilder: (context, error, stackTrace) {
-                                              return const Icon(Icons.broken_image, size: 50, color: Colors.grey);
+                                            errorBuilder:
+                                                (context, error, stackTrace) {
+                                              return const Icon(
+                                                  Icons.broken_image,
+                                                  size: 50,
+                                                  color: Colors.grey);
                                             },
                                           )
                                         : Image.asset(
@@ -197,42 +202,6 @@ class _SearchFeaturesState extends State<SearchFeatures> {
             ),
           ],
         ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: 1,
-        onTap: (i) {
-          if (i == 0) {
-            Navigator.of(context)
-                .pushNamedAndRemoveUntil('/home', (route) => false);
-          }
-        },
-        items: [
-          BottomNavigationBarItem(
-            icon: SvgPicture.asset(
-              'assets/images/logo_TrendBottomNav.svg',
-              width: 24,
-              height: 24,
-            ),
-            activeIcon: SvgPicture.asset(
-              'assets/images/logo_TrendBottomNav.svg',
-              width: 28,
-              height: 28,
-              color: Color.fromARGB(255, 2, 0, 143),
-            ),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.add_circle_outline),
-            label: 'Create',
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-        ],
-        selectedItemColor: primaryColor,
-        unselectedItemColor: Colors.grey,
-        showSelectedLabels: false,
-        showUnselectedLabels: false,
       ),
     );
   }
