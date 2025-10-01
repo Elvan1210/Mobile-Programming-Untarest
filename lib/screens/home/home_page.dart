@@ -8,6 +8,7 @@ import 'package:untarest_app/utils/constants.dart';
 import 'package:untarest_app/screens/profile/profile.dart';
 import 'package:untarest_app/utils/search_bar.dart';
 import 'package:untarest_app/widgets/news_feed_grid.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -395,14 +396,14 @@ Widget trendingVibes(List<NewsArticle> articles) {
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text("TRENDING VIBES!",
+      const Text("TRENDING VIBES!",
           style: TextStyle(
               fontWeight: FontWeight.bold, fontSize: 18, color: Colors.red)),
       ...trending.map((article) => ListTile(
             leading: article.urlToImage.isNotEmpty
                 ? Image.asset(article.urlToImage,
                     width: 40, height: 40, fit: BoxFit.cover)
-                : Icon(Icons.trending_up),
+                : const Icon(Icons.trending_up),
             title: Text(article.content),
             subtitle: Text(article.content),
           )),
@@ -414,7 +415,7 @@ void _showCountryPicker(
     BuildContext context, List<String> countries, Function(String) onSelected) {
   showModalBottomSheet(
     context: context,
-    shape: RoundedRectangleBorder(
+    shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
     builder: (context) {
@@ -430,7 +431,7 @@ void _showCountryPicker(
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
-                  decoration: InputDecoration(
+                  decoration: const InputDecoration(
                     hintText: 'Search country...',
                     prefixIcon: Icon(Icons.search),
                   ),
