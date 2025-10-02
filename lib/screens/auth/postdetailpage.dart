@@ -22,7 +22,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
 
   String getShortContent(String content) {
     if (content.length <= 125) return content;
-    return content.substring(0, 125) + '...';
+    return '${content.substring(0, 125)}...';
   }
 
   String formatNumber(int number) {
@@ -41,7 +41,6 @@ class _PostDetailPageState extends State<PostDetailPage> {
   Future<void> _toggleLike(bool isCurrentlyLiked) async {
     try {
       await _firestoreService.toggleLike(widget.article.url);
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -62,10 +61,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
         );
       }
     }
@@ -78,7 +74,6 @@ class _PostDetailPageState extends State<PostDetailPage> {
         widget.article.urlToImage,
         widget.article.content,
       );
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -99,10 +94,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
         );
       }
     }
@@ -110,18 +102,14 @@ class _PostDetailPageState extends State<PostDetailPage> {
 
   Future<void> _postComment() async {
     if (_commentController.text.trim().isEmpty) return;
-
     setState(() => _isPostingComment = true);
-
     try {
       await _firestoreService.addComment(
         widget.article.url,
         _commentController.text.trim(),
       );
-
       _commentController.clear();
       FocusScope.of(context).unfocus();
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -165,7 +153,6 @@ class _PostDetailPageState extends State<PostDetailPage> {
           ),
           child: Column(
             children: [
-              // Handle bar
               Container(
                 margin: const EdgeInsets.symmetric(vertical: 12),
                 width: 50,
@@ -175,18 +162,14 @@ class _PostDetailPageState extends State<PostDetailPage> {
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-
-              // Title
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                 child: Row(
                   children: [
                     const Icon(Icons.comment, color: primaryColor, size: 24),
                     const SizedBox(width: 8),
                     StreamBuilder<int>(
-                      stream: _firestoreService
-                          .getCommentsCount(widget.article.url),
+                      stream: _firestoreService.getCommentsCount(widget.article.url),
                       builder: (context, snapshot) {
                         final count = snapshot.data ?? 0;
                         return Text(
@@ -202,64 +185,43 @@ class _PostDetailPageState extends State<PostDetailPage> {
                   ],
                 ),
               ),
-
               const Divider(height: 1),
-
-              // Comments list
               Expanded(
                 child: StreamBuilder<QuerySnapshot>(
                   stream: _firestoreService.getComments(widget.article.url),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                        child: CircularProgressIndicator(color: primaryColor),
-                      );
+                      return const Center(child: CircularProgressIndicator(color: primaryColor));
                     }
-
                     if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                       return Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(
-                              Icons.chat_bubble_outline,
-                              size: 80,
-                              color: Colors.grey[300],
-                            ),
+                            Icon(Icons.chat_bubble_outline, size: 80, color: Colors.grey[300]),
                             const SizedBox(height: 16),
                             const Text(
                               'Belum ada komentar',
-                              style: TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 16,
-                                color: Colors.grey,
-                              ),
+                              style: TextStyle(fontFamily: 'Poppins', fontSize: 16, color: Colors.grey),
                             ),
                             const SizedBox(height: 8),
                             const Text(
                               'Jadilah yang pertama berkomentar!',
-                              style: TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 14,
-                                color: Colors.grey,
-                              ),
+                              style: TextStyle(fontFamily: 'Poppins', fontSize: 14, color: Colors.grey),
                             ),
                           ],
                         ),
                       );
                     }
-
                     final comments = snapshot.data!.docs;
                     return ListView.builder(
                       controller: scrollController,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       itemCount: comments.length,
                       itemBuilder: (context, index) {
-                        final comment =
-                            comments[index].data() as Map<String, dynamic>;
+                        final comment = comments[index].data() as Map<String, dynamic>;
                         final timestamp = comment['timestamp'] as Timestamp?;
-                        final userEmail = comment['userEmail'] ?? 'Anonymous';
+                        final username = comment['username'] ?? 'User';
                         final text = comment['text'] ?? '';
 
                         return Padding(
@@ -267,12 +229,11 @@ class _PostDetailPageState extends State<PostDetailPage> {
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Avatar
                               CircleAvatar(
                                 radius: 20,
                                 backgroundColor: primaryColor.withOpacity(0.1),
                                 child: Text(
-                                  userEmail[0].toUpperCase(),
+                                  username.isNotEmpty ? username[0].toUpperCase() : 'U',
                                   style: const TextStyle(
                                     color: primaryColor,
                                     fontWeight: FontWeight.bold,
@@ -281,8 +242,6 @@ class _PostDetailPageState extends State<PostDetailPage> {
                                 ),
                               ),
                               const SizedBox(width: 12),
-
-                              // Comment content
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -291,7 +250,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
                                       children: [
                                         Expanded(
                                           child: Text(
-                                            userEmail,
+                                            username,
                                             style: const TextStyle(
                                               fontWeight: FontWeight.bold,
                                               fontSize: 14,
@@ -303,8 +262,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
                                         if (timestamp != null) ...[
                                           const SizedBox(width: 8),
                                           Text(
-                                            _formatTimestamp(
-                                                timestamp.toDate()),
+                                            _formatTimestamp(timestamp.toDate()),
                                             style: TextStyle(
                                               fontSize: 12,
                                               color: Colors.grey[600],
@@ -334,8 +292,6 @@ class _PostDetailPageState extends State<PostDetailPage> {
                   },
                 ),
               ),
-
-              // Comment input
               Container(
                 padding: EdgeInsets.only(
                   left: 16,
@@ -371,13 +327,9 @@ class _PostDetailPageState extends State<PostDetailPage> {
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(25),
-                            borderSide:
-                                const BorderSide(color: primaryColor, width: 2),
+                            borderSide: const BorderSide(color: primaryColor, width: 2),
                           ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 10,
-                          ),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                         ),
                         maxLines: null,
                         style: const TextStyle(fontFamily: 'Poppins'),
@@ -395,13 +347,9 @@ class _PostDetailPageState extends State<PostDetailPage> {
                             ? const SizedBox(
                                 width: 20,
                                 height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                               )
-                            : const Icon(Icons.send,
-                                color: Colors.white, size: 20),
+                            : const Icon(Icons.send, color: Colors.white, size: 20),
                       ),
                     ),
                   ],
@@ -459,8 +407,6 @@ class _PostDetailPageState extends State<PostDetailPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Image
-                  // Image
                   if (widget.article.urlToImage.isNotEmpty)
                     buildImage(widget.article.urlToImage)
                   else
@@ -471,35 +417,21 @@ class _PostDetailPageState extends State<PostDetailPage> {
                         child: Icon(Icons.image, size: 100, color: Colors.grey),
                       ),
                     ),
-
-                  // Content
                   Padding(
                     padding: const EdgeInsets.all(20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          showFullText
-                              ? widget.article.content
-                              : getShortContent(widget.article.content),
-                          style: const TextStyle(
-                            fontSize: 16,
-                            height: 1.6,
-                            fontFamily: 'Poppins',
-                            color: Colors.black87,
-                          ),
+                          showFullText ? widget.article.content : getShortContent(widget.article.content),
+                          style: const TextStyle(fontSize: 16, height: 1.6, fontFamily: 'Poppins', color: Colors.black87),
                         ),
-                        if (widget.article.content.length > 125 &&
-                            !showFullText)
+                        if (widget.article.content.length > 125 && !showFullText)
                           GestureDetector(
                             onTap: () => setState(() => showFullText = true),
                             child: const Text(
                               'Read more',
-                              style: TextStyle(
-                                color: Colors.blue,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Poppins',
-                              ),
+                              style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold, fontFamily: 'Poppins'),
                             ),
                           ),
                       ],
@@ -509,8 +441,6 @@ class _PostDetailPageState extends State<PostDetailPage> {
               ),
             ),
           ),
-
-          // Bottom action bar
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
@@ -525,21 +455,15 @@ class _PostDetailPageState extends State<PostDetailPage> {
             ),
             child: Row(
               children: [
-                // Like button
                 StreamBuilder<bool>(
-                  stream: _firestoreService
-                      .isSavedStream(widget.article.url)
-                      .map((_) => true)
-                      .handleError((_) => false),
+                  stream: _firestoreService.isSavedStream(widget.article.url).map((_) => true).handleError((_) => false),
                   builder: (context, _) {
                     return FutureBuilder<bool>(
                       future: _firestoreService.isLiked(widget.article.url),
                       builder: (context, snapshot) {
                         final isLiked = snapshot.data ?? false;
-
                         return _ActionButton(
-                          icon:
-                              isLiked ? Icons.favorite : Icons.favorite_border,
+                          icon: isLiked ? Icons.favorite : Icons.favorite_border,
                           color: isLiked ? Colors.red : Colors.grey[700]!,
                           label: 'Like',
                           onTap: () => _toggleLike(isLiked),
@@ -548,16 +472,11 @@ class _PostDetailPageState extends State<PostDetailPage> {
                     );
                   },
                 ),
-
                 const SizedBox(width: 16),
-
-                // Comment button
                 StreamBuilder<int>(
-                  stream:
-                      _firestoreService.getCommentsCount(widget.article.url),
+                  stream: _firestoreService.getCommentsCount(widget.article.url),
                   builder: (context, snapshot) {
                     final count = snapshot.data ?? 0;
-
                     return _ActionButton(
                       icon: Icons.comment_outlined,
                       color: Colors.grey[700]!,
@@ -566,15 +485,11 @@ class _PostDetailPageState extends State<PostDetailPage> {
                     );
                   },
                 ),
-
                 const Spacer(),
-
-                // Save button
                 StreamBuilder<bool>(
                   stream: _firestoreService.isSavedStream(widget.article.url),
                   builder: (context, snapshot) {
                     final isSaved = snapshot.data ?? false;
-
                     return _ActionButton(
                       icon: isSaved ? Icons.bookmark : Icons.bookmark_border,
                       color: isSaved ? primaryColor : Colors.grey[700]!,
@@ -634,19 +549,17 @@ class _ActionButton extends StatelessWidget {
 
 Widget buildImage(String path) {
   if (path.startsWith("assets/")) {
-    // Kalau path dimulai "assets/", pakai local asset
     return Image.asset(
       path,
       width: double.infinity,
       fit: BoxFit.cover,
     );
   } else {
-    // Kalau URL (http/https), pakai network
     return Image.network(
       path,
       width: double.infinity,
       fit: BoxFit.cover,
-      headers: {
+      headers: const {
         'User-Agent': 'Mozilla/5.0',
       },
       errorBuilder: (context, error, stackTrace) {
@@ -661,3 +574,4 @@ Widget buildImage(String path) {
     );
   }
 }
+
