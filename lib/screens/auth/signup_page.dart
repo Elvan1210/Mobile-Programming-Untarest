@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:untarest_app/screens/auth/login_page.dart';
 import 'package:untarest_app/screens/auth/faculty_selection_page.dart';
+import 'package:untarest_app/services/firestore_service.dart';
 import 'package:untarest_app/utils/constants.dart';
-import 'login_signup_toggle.dart'; // toggle yang kita buat
+import 'login_signup_toggle.dart';
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
@@ -12,14 +13,18 @@ class SignupPage extends StatefulWidget {
 }
 
 class _SignupPageState extends State<SignupPage> {
+  final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _firestoreService = FirestoreService();
+
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
   @override
   void dispose() {
+    _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -36,27 +41,51 @@ class _SignupPageState extends State<SignupPage> {
     ));
   }
 
-  void _validateAndNavigate() {
-    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+  void _validateAndNavigate() async {
+    final username = _usernameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    if (username.isEmpty || email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Email and password cannot be empty.')),
+        const SnackBar(content: Text('Semua kolom harus diisi.')),
+      );
+      return;
+    }
+    
+    // Validasi format username (opsional, contoh: tanpa spasi)
+    if (username.contains(' ')) {
+       ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Username tidak boleh mengandung spasi.')),
       );
       return;
     }
 
-    if (_passwordController.text != _confirmPasswordController.text) {
+    if (password != _confirmPasswordController.text) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Passwords do not match.')),
+        const SnackBar(content: Text('Password tidak cocok.')),
       );
       return;
     }
-
+    
+    final isTaken = await _firestoreService.isUsernameTaken(username);
+    if (isTaken) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Username ini sudah digunakan.')),
+        );
+      }
+      return;
+    }
+    
+    // PERHATIAN: Pastikan FacultySelectionPage bisa menerima 'username'
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => FacultySelectionPage(
-          email: _emailController.text,
-          password: _passwordController.text,
+          username: username, // Kirim username
+          email: email,
+          password: password,
         ),
       ),
     );
@@ -67,7 +96,6 @@ class _SignupPageState extends State<SignupPage> {
     return Scaffold(
       body: Stack(
         children: [
-          // Background image
           Container(
             decoration: const BoxDecoration(
               image: DecorationImage(
@@ -76,11 +104,9 @@ class _SignupPageState extends State<SignupPage> {
               ),
             ),
           ),
-          // Dark overlay
           Container(
             color: Colors.black.withOpacity(0.5),
           ),
-          // Content
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
@@ -96,18 +122,14 @@ class _SignupPageState extends State<SignupPage> {
                       ),
                     ),
                     const SizedBox(height: 20),
-
-                    // TOGGLE Login dan Signup
                     LoginSignupToggle(
                       isLogin: false,
                       onLoginTap: () {
                         _navigateWithFade(context, const LoginPage());
                       },
-                      onSignupTap: () {}, // tetap di signup
+                      onSignupTap: () {},
                     ),
                     const SizedBox(height: 20),
-
-                    // White container for form
                     Container(
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
@@ -116,22 +138,19 @@ class _SignupPageState extends State<SignupPage> {
                       ),
                       child: Column(
                         children: [
-                          // Email Field
+                          // -- Username Field --
                           TextField(
-                            controller: _emailController,
-                            keyboardType: TextInputType.emailAddress,
+                            controller: _usernameController,
                             decoration: InputDecoration(
-                              hintText: 'Enter your email',
+                              hintText: 'Masukkan username',
                               prefixIcon:
-                                  const Icon(Icons.email, color: primaryColor),
+                                  const Icon(Icons.person, color: primaryColor),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
-                                borderSide:
-                                    const BorderSide(color: primaryColor),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
-                                borderSide: BorderSide(color: Colors.grey),
+                                borderSide: BorderSide(color: Colors.grey.shade400),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
@@ -144,12 +163,38 @@ class _SignupPageState extends State<SignupPage> {
                           ),
                           const SizedBox(height: 16),
 
-                          // Password Field
+                          // -- Email Field --
+                          TextField(
+                            controller: _emailController,
+                            keyboardType: TextInputType.emailAddress,
+                            decoration: InputDecoration(
+                              hintText: 'Masukkan email',
+                              prefixIcon:
+                                  const Icon(Icons.email, color: primaryColor),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: BorderSide(color: Colors.grey.shade400),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: const BorderSide(
+                                    color: primaryColor, width: 2),
+                              ),
+                              filled: true,
+                              fillColor: Colors.grey[100],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // -- Password Field --
                           TextField(
                             controller: _passwordController,
                             obscureText: _obscurePassword,
                             decoration: InputDecoration(
-                              hintText: 'Enter your password',
+                              hintText: 'Masukkan password',
                               prefixIcon:
                                   const Icon(Icons.lock, color: primaryColor),
                               suffixIcon: IconButton(
@@ -165,14 +210,12 @@ class _SignupPageState extends State<SignupPage> {
                                   });
                                 },
                               ),
-                              border: OutlineInputBorder(
+                             border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
-                                borderSide:
-                                    const BorderSide(color: primaryColor),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
-                                borderSide: BorderSide(color: Colors.grey),
+                                borderSide: BorderSide(color: Colors.grey.shade400),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
@@ -185,12 +228,12 @@ class _SignupPageState extends State<SignupPage> {
                           ),
                           const SizedBox(height: 16),
 
-                          // Confirm Password Field
+                          // -- Confirm Password Field --
                           TextField(
                             controller: _confirmPasswordController,
                             obscureText: _obscureConfirmPassword,
                             decoration: InputDecoration(
-                              hintText: 'Confirm your password',
+                              hintText: 'Konfirmasi password',
                               prefixIcon:
                                   const Icon(Icons.lock, color: primaryColor),
                               suffixIcon: IconButton(
@@ -209,12 +252,10 @@ class _SignupPageState extends State<SignupPage> {
                               ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
-                                borderSide:
-                                    const BorderSide(color: primaryColor),
                               ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
-                                borderSide: BorderSide(color: Colors.grey),
+                                borderSide: BorderSide(color: Colors.grey.shade400),
                               ),
                               focusedBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
@@ -227,7 +268,7 @@ class _SignupPageState extends State<SignupPage> {
                           ),
                           const SizedBox(height: 24),
 
-                          // Next Button
+                          // -- Next Button --
                           SizedBox(
                             width: double.infinity,
                             height: 50,
@@ -240,7 +281,7 @@ class _SignupPageState extends State<SignupPage> {
                                 ),
                               ),
                               child: const Text(
-                                'Next',
+                                'Selanjutnya',
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
@@ -262,3 +303,4 @@ class _SignupPageState extends State<SignupPage> {
     );
   }
 }
+

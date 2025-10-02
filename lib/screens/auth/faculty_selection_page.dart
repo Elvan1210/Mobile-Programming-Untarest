@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:untarest_app/screens/home/home_page.dart';
 import 'package:untarest_app/services/auth_service.dart';
+import 'package:untarest_app/services/firestore_service.dart'; // Import FirestoreService
 import 'package:untarest_app/utils/constants.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class FacultySelectionPage extends StatefulWidget {
+  final String username; // MODIFIKASI: Tambahkan username
   final String email;
   final String password;
 
   const FacultySelectionPage({
     super.key,
+    required this.username, // MODIFIKASI: Tambahkan username
     required this.email,
     required this.password,
   });
@@ -20,6 +23,7 @@ class FacultySelectionPage extends StatefulWidget {
 
 class _FacultySelectionPageState extends State<FacultySelectionPage> {
   final _authService = AuthService();
+  final _firestoreService = FirestoreService(); // Buat instance FirestoreService
   String? _selectedFaculty;
   bool _isLoading = false;
 
@@ -37,7 +41,7 @@ class _FacultySelectionPageState extends State<FacultySelectionPage> {
   void _register() async {
     if (_selectedFaculty == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a faculty.')),
+        const SnackBar(content: Text('Silakan pilih fakultas.')),
       );
       return;
     }
@@ -47,64 +51,57 @@ class _FacultySelectionPageState extends State<FacultySelectionPage> {
     });
 
     try {
+      // MODIFIKASI: Kirim username saat registrasi
       final user = await _authService.registerWithEmailAndPassword(
         widget.email,
         widget.password,
+        widget.username,
       );
 
       if (!mounted) return;
 
       if (user != null) {
-        // TODO: Save faculty to Firestore user profile here
-        Navigator.pushReplacement(
+        // MODIFIKASI: Simpan fakultas ke Firestore
+        await _firestoreService.updateUserData(user.uid, {
+          'faculty': _selectedFaculty,
+        });
+
+        Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (context) => const HomePage()),
+          (route) => false, // Hapus semua halaman sebelumnya
         );
       }
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
 
-      String message = 'Registration failed. Please try again.';
-
-      print('FirebaseAuthException code: ${e.code}'); // Debug log
-      print('FirebaseAuthException message: ${e.message}'); // Debug log
-
+      String message;
       switch (e.code) {
         case 'email-already-in-use':
-          message = 'This email has already been registered.';
+          message = 'Email ini sudah terdaftar.';
           break;
         case 'weak-password':
-          message = 'The password provided is too weak.';
+          message = 'Password terlalu lemah.';
           break;
         case 'invalid-email':
-          message = 'The email address is not valid.';
-          break;
-        case 'operation-not-allowed':
-          message = 'Email/password accounts are not enabled.';
+          message = 'Format email tidak valid.';
           break;
         default:
-          message = 'Registration failed: ${e.message ?? e.code}';
+          message = 'Registrasi gagal: ${e.message ?? e.code}';
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(message),
           backgroundColor: const Color.fromARGB(255, 130, 6, 6),
-          duration: const Duration(seconds: 4),
-          behavior: SnackBarBehavior.floating,
         ),
       );
     } catch (e) {
       if (!mounted) return;
-
-      print('Unexpected error: $e'); // Debug log
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('An unexpected error occurred: $e'),
+          content: Text('Terjadi kesalahan: $e'),
           backgroundColor: const Color.fromARGB(255, 110, 5, 5),
-          duration: const Duration(seconds: 4),
-          behavior: SnackBarBehavior.floating,
         ),
       );
     } finally {
@@ -121,7 +118,6 @@ class _FacultySelectionPageState extends State<FacultySelectionPage> {
     return Scaffold(
       body: Stack(
         children: [
-          // Background image
           Container(
             decoration: const BoxDecoration(
               image: DecorationImage(
@@ -130,15 +126,12 @@ class _FacultySelectionPageState extends State<FacultySelectionPage> {
               ),
             ),
           ),
-          // Dark overlay
           Container(
             color: Colors.black.withOpacity(0.5),
           ),
-          // Content
           SafeArea(
             child: Column(
               children: [
-                // Back button
                 Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Row(
@@ -153,7 +146,6 @@ class _FacultySelectionPageState extends State<FacultySelectionPage> {
                     ],
                   ),
                 ),
-                // Main content
                 Expanded(
                   child: Center(
                     child: SingleChildScrollView(
@@ -167,7 +159,6 @@ class _FacultySelectionPageState extends State<FacultySelectionPage> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // Logo
                             Center(
                               child: Image.asset(
                                 "assets/images/logo_UNTARESTBIG.png",
@@ -176,7 +167,7 @@ class _FacultySelectionPageState extends State<FacultySelectionPage> {
                             ),
                             const SizedBox(height: 5),
                             const Text(
-                              'Choose your Faculty',
+                              'Pilih Fakultas Anda',
                               style: TextStyle(
                                 fontSize: 16,
                                 color: Colors.black87,
@@ -184,8 +175,6 @@ class _FacultySelectionPageState extends State<FacultySelectionPage> {
                               ),
                             ),
                             const SizedBox(height: 32),
-
-                            // Faculty Dropdown
                             Container(
                               padding:
                                   const EdgeInsets.symmetric(horizontal: 12.0),
@@ -198,7 +187,7 @@ class _FacultySelectionPageState extends State<FacultySelectionPage> {
                                 child: DropdownButton<String>(
                                   isExpanded: true,
                                   value: _selectedFaculty,
-                                  hint: const Text('Select Faculty'),
+                                  hint: const Text('Pilih Fakultas'),
                                   icon: const Icon(Icons.arrow_drop_down,
                                       color: primaryColor),
                                   items: _faculties.map((String faculty) {
@@ -219,8 +208,6 @@ class _FacultySelectionPageState extends State<FacultySelectionPage> {
                               ),
                             ),
                             const SizedBox(height: 24),
-
-                            // Sign Up Button
                             SizedBox(
                               width: double.infinity,
                               height: 50,
