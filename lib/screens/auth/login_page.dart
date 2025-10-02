@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:untarest_app/screens/auth/signup_page.dart';
 import 'package:untarest_app/screens/home/home_page.dart';
 import 'package:untarest_app/services/auth_service.dart';
+import 'package:untarest_app/services/firestore_service.dart';
 import 'package:untarest_app/utils/custom_widgets.dart';
 import 'package:untarest_app/utils/constants.dart';
 import 'login_signup_toggle.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -16,7 +18,9 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _authService = AuthService();
-  final _emailController = TextEditingController();
+  final _firestoreService = FirestoreService();
+  
+  final _identifierController = TextEditingController();
   final _passwordController = TextEditingController();
 
   bool keepMeLoggedIn = false;
@@ -26,10 +30,16 @@ class _LoginPageState extends State<LoginPage> {
     await prefs.setBool('keepMeLoggedIn', value);
   }
 
-  Future<void> checkLoginState() async {
+  // --- MODIFIKASI: Ubah fungsi agar tidak memblokir ---
+  void _checkLoginState() async {
+    // Memberi jeda agar UI selesai dibangun terlebih dahulu
+    await Future.delayed(Duration.zero);
+
     final prefs = await SharedPreferences.getInstance();
     final loggedIn = prefs.getBool('keepMeLoggedIn') ?? false;
-    if (loggedIn && mounted) {
+    
+    // Pengecekan Firebase Auth juga penting
+    if (loggedIn && FirebaseAuth.instance.currentUser != null && mounted) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const HomePage()),
@@ -40,27 +50,67 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void initState() {
     super.initState();
-    checkLoginState();
+    // --- MODIFIKASI: Panggil fungsi tanpa await ---
+    _checkLoginState();
   }
 
   void _login() async {
-    final user = await _authService.signInWithEmailAndPassword(
-      _emailController.text,
-      _passwordController.text,
+    final identifier = _identifierController.text.trim();
+    final password = _passwordController.text;
+
+    if (identifier.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Kolom tidak boleh kosong.')),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
     );
 
-    if (user != null && mounted) {
-      if (keepMeLoggedIn) {
-        await saveLoginState(true);
-      }
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const HomePage()),
-      );
+    String? emailForLogin;
+
+    if (identifier.contains('@')) {
+      emailForLogin = identifier;
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Login failed. Check your credentials.')),
+      emailForLogin = await _firestoreService.getEmailFromUsername(identifier);
+    }
+    
+    if(mounted) Navigator.of(context).pop();
+
+    if (emailForLogin == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Login gagal. Pengguna tidak ditemukan.')),
+        );
+      }
+      return;
+    }
+    
+    try {
+      final user = await _authService.signInWithEmailAndPassword(
+        emailForLogin,
+        password,
       );
+
+      if (user != null && mounted) {
+        if (keepMeLoggedIn) {
+          await saveLoginState(true);
+        }
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomePage()),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Login gagal. Periksa kembali kredensial Anda.')),
+        );
+      }
     }
   }
 
@@ -91,8 +141,6 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
                 const SizedBox(height: 0),
-
-                //TOGGLE
                 LoginSignupToggle(
                   isLogin: true,
                   onLoginTap: () {},
@@ -100,20 +148,18 @@ class _LoginPageState extends State<LoginPage> {
                     _navigateWithFade(context, const SignupPage());
                   },
                 ),
-
                 const SizedBox(height: 20),
                 CustomTextField(
-                  controller: _emailController,
-                  hintText: 'Enter your email',
-                  icon: Icons.email,
+                  controller: _identifierController,
+                  hintText: 'Masukkan email atau username',
+                  icon: Icons.person_outline,
                 ),
                 CustomTextField(
                   controller: _passwordController,
-                  hintText: 'Enter your password',
+                  hintText: 'Masukkan password',
                   obscureText: true,
                   icon: Icons.lock,
                 ),
-
                 CustomButton(text: 'Login', onPressed: _login),
                 const SizedBox(height: 5),
                 TextButton(
@@ -129,12 +175,12 @@ class _LoginPageState extends State<LoginPage> {
                     text: TextSpan(
                       children: [
                         const TextSpan(
-                          text: "Don't have an account? ",
+                          text: "Belum punya akun? ",
                           style: TextStyle(
                               color: Colors.black87, fontFamily: 'Poppins'),
                         ),
                         const TextSpan(
-                          text: "Create an account",
+                          text: "Buat akun",
                           style: TextStyle(
                             color: primaryColor,
                             fontWeight: FontWeight.bold,
@@ -155,7 +201,7 @@ class _LoginPageState extends State<LoginPage> {
                       },
                     ),
                     const Text(
-                      'Keep me logged in',
+                      'Biarkan saya tetap login',
                       style: TextStyle(fontFamily: 'Poppins'),
                     ),
                   ],
@@ -178,3 +224,4 @@ void _navigateWithFade(BuildContext context, Widget page) {
     },
   ));
 }
+

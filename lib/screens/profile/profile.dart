@@ -7,6 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'profile_header.dart';
 import 'profile_tabs.dart';
+import 'package:untarest_app/services/auth_service.dart';
+import 'package:untarest_app/screens/auth/login_page.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -16,12 +18,12 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
+  final AuthService _authService = AuthService();
+
   String _name = 'Nama Lengkap';
   String _nim = 'NIM';
   String? _profileImageUrl;
-  int _selectedTab = 0; // 0: Photos, 1: Liked, 2: Saved
-
-  static const Color untarRed = Color.fromARGB(255, 118, 0, 0);
+  int _selectedTab = 0;
 
   @override
   void initState() {
@@ -29,6 +31,32 @@ class _ProfilePageState extends State<ProfilePage> {
     _loadProfileData();
   }
 
+  // --- FUNGSI INI YANG DIPERBARUI ---
+  Future<void> _logout() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      // --- PERUBAHAN DI SINI: Menggunakan key 'keepMeLoggedIn' yang benar ---
+      await prefs.remove('keepMeLoggedIn');
+      
+      await _authService.signOut();
+
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const LoginPage()),
+          (Route<dynamic> route) => false,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal untuk logout: $e')),
+        );
+      }
+    }
+  }
+
+  // --- Kode di bawah ini tidak ada perubahan ---
   Future<String?> _uploadImage(File imageFile) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return null;
@@ -156,6 +184,18 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white),
+            onPressed: _logout,
+            tooltip: 'Logout',
+          ),
+        ],
+      ),
       body: Container(
         decoration: const BoxDecoration(
           image: DecorationImage(
@@ -164,9 +204,9 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         ),
         child: SafeArea(
+          top: false,
           child: Column(
             children: [
-              // Profile Header Section
               ProfileHeader(
                 name: _name,
                 nim: _nim,
@@ -176,7 +216,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
               const SizedBox(height: 20),
 
-              // Tab Buttons Section
               ProfileTabs(
                 selectedTab: _selectedTab,
                 onTabSelected: (index) {
@@ -188,7 +227,6 @@ class _ProfilePageState extends State<ProfilePage> {
 
               const SizedBox(height: 20),
 
-              // Content Section
               Expanded(
                 child: _buildTabContent(),
               ),
@@ -236,3 +274,4 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 }
+
