@@ -40,7 +40,7 @@ dependencies:
   cloud_firestore: ^6.0.2
   http: ^1.5.0
   firebase_storage: ^13.0.2
-  
+
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
@@ -88,6 +88,20 @@ flutter:
     - family: Poppins
       fonts:
         - asset: assets/fonts/PoppinsRegular.ttf
+          weight: 500
+    - family: GabrielSans
+      fonts:
+        - asset: assets/fonts/GabrielSans-Trial-Black.woff2
+        - asset: assets/fonts/GabrielSans-Trial-BlackItalic.woff2
+        - asset: assets/fonts/GabrielSans-Trial-Bold.woff2
+        - asset: assets/fonts/GabrielSans-Trial-BoldItalic.woff2
+        - asset: assets/fonts/GabrielSans-Trial-Light.woff2
+        - asset: assets/fonts/GabrielSans-Trial-LightItalic.woff2
+        - asset: assets/fonts/GabrielSans-Trial-Medium.woff2
+        - asset: assets/fonts/GabrielSans-Trial-MediumItalic.woff2
+        - asset: assets/fonts/GabrielSans-Trial-Normal.woff2
+        - asset: assets/fonts/GabrielSans-Trial-Thin.woff2
+
   #   - family: Trajan Pro
   #     fonts:
   #       - asset: fonts/TrajanPro.ttf
