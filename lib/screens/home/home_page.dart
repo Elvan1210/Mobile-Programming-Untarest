@@ -215,12 +215,12 @@ class _HomeContentState extends State<_HomeContent> {
                 children: [
                   const SizedBox(height: 20),
                   Padding(
-                    padding: const EdgeInsets.only(left: 15, top: 30, bottom: 0),
+                    padding: const EdgeInsets.only(left: 0, top: 30, bottom: 0),
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: Image.asset(
                         "assets/images/logo_UNTAREST.png",
-                        height: 35,
+                        height: 50,
                         fit: BoxFit.contain,
                       ),
                     ),
@@ -328,7 +328,8 @@ class _HomeContentState extends State<_HomeContent> {
                                   child: CircularProgressIndicator(
                                     value: loadingProgress.expectedTotalBytes !=
                                             null
-                                        ? loadingProgress.cumulativeBytesLoaded /
+                                        ? loadingProgress
+                                                .cumulativeBytesLoaded /
                                             loadingProgress.expectedTotalBytes!
                                         : null,
                                     color: primaryColor,
@@ -465,7 +466,6 @@ class _HomeContentState extends State<_HomeContent> {
   }
 }
 
-
 class _TrendingVibesSection extends StatelessWidget {
   final String selectedCountry;
   final Function(String) onCountryChanged;
@@ -478,7 +478,7 @@ class _TrendingVibesSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
         decoration: BoxDecoration(
@@ -513,8 +513,14 @@ class _TrendingVibesSection extends StatelessWidget {
               icon: const Icon(Icons.arrow_drop_down, color: Colors.black87),
               onPressed: () {
                 _showCountryPicker(context, [
-                  'Indonesia', 'USA', 'Japan', 'South Korea', 'China', 'France',
-                  'UK', 'Global',
+                  'Indonesia',
+                  'USA',
+                  'Japan',
+                  'South Korea',
+                  'China',
+                  'France',
+                  'UK',
+                  'Global',
                 ], (country) {
                   onCountryChanged(country);
                 });

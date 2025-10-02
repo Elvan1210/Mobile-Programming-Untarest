@@ -5,6 +5,7 @@ import 'package:untarest_app/services/auth_service.dart';
 import 'package:untarest_app/utils/custom_widgets.dart';
 import 'package:untarest_app/utils/constants.dart';
 import 'login_signup_toggle.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -18,12 +19,40 @@ class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  bool keepMeLoggedIn = false;
+
+  Future<void> saveLoginState(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('keepMeLoggedIn', value);
+  }
+
+  Future<void> checkLoginState() async {
+    final prefs = await SharedPreferences.getInstance();
+    final loggedIn = prefs.getBool('keepMeLoggedIn') ?? false;
+    if (loggedIn && mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const HomePage()),
+      );
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    checkLoginState();
+  }
+
   void _login() async {
     final user = await _authService.signInWithEmailAndPassword(
       _emailController.text,
       _passwordController.text,
     );
+
     if (user != null && mounted) {
+      if (keepMeLoggedIn) {
+        await saveLoginState(true);
+      }
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const HomePage()),
@@ -84,8 +113,9 @@ class _LoginPageState extends State<LoginPage> {
                   obscureText: true,
                   icon: Icons.lock,
                 ),
+
                 CustomButton(text: 'Login', onPressed: _login),
-                const SizedBox(height: 10),
+                const SizedBox(height: 5),
                 TextButton(
                   onPressed: () {
                     Navigator.push(
@@ -95,10 +125,40 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     );
                   },
-                  child: const Text(
-                    'Don\'t have an account? Create an account',
-                    style: TextStyle(color: primaryColor),
+                  child: RichText(
+                    text: TextSpan(
+                      children: [
+                        const TextSpan(
+                          text: "Don't have an account? ",
+                          style: TextStyle(
+                              color: Colors.black87, fontFamily: 'Poppins'),
+                        ),
+                        const TextSpan(
+                          text: "Create an account",
+                          style: TextStyle(
+                            color: primaryColor,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Poppins',
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Checkbox(
+                      value: keepMeLoggedIn,
+                      onChanged: (val) {
+                        setState(() => keepMeLoggedIn = val ?? false);
+                      },
+                    ),
+                    const Text(
+                      'Keep me logged in',
+                      style: TextStyle(fontFamily: 'Poppins'),
+                    ),
+                  ],
                 ),
               ],
             ),
