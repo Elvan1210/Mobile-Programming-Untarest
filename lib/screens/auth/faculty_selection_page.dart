@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:untarest_app/screens/home/home_page.dart';
 import 'package:untarest_app/services/auth_service.dart';
-import 'package:untarest_app/services/firestore_service.dart'; // Import FirestoreService
+import 'package:untarest_app/services/firestore_service.dart';
 import 'package:untarest_app/utils/constants.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class FacultySelectionPage extends StatefulWidget {
-  final String username; // MODIFIKASI: Tambahkan username
+  // Memastikan class ini bisa menerima username
+  final String username;
   final String email;
   final String password;
 
   const FacultySelectionPage({
     super.key,
-    required this.username, // MODIFIKASI: Tambahkan username
+    // Memastikan constructor ini WAJIB menerima username
+    required this.username,
     required this.email,
     required this.password,
   });
@@ -23,7 +25,7 @@ class FacultySelectionPage extends StatefulWidget {
 
 class _FacultySelectionPageState extends State<FacultySelectionPage> {
   final _authService = AuthService();
-  final _firestoreService = FirestoreService(); // Buat instance FirestoreService
+  final _firestoreService = FirestoreService();
   String? _selectedFaculty;
   bool _isLoading = false;
 
@@ -41,7 +43,7 @@ class _FacultySelectionPageState extends State<FacultySelectionPage> {
   void _register() async {
     if (_selectedFaculty == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Silakan pilih fakultas.')),
+        const SnackBar(content: Text('Silakan pilih fakultas Anda.')),
       );
       return;
     }
@@ -51,17 +53,17 @@ class _FacultySelectionPageState extends State<FacultySelectionPage> {
     });
 
     try {
-      // MODIFIKASI: Kirim username saat registrasi
+      // Mengirimkan username ke service saat registrasi
       final user = await _authService.registerWithEmailAndPassword(
         widget.email,
         widget.password,
-        widget.username,
+        widget.username, // <-- Bagian paling PENTING ada di sini
       );
 
       if (!mounted) return;
 
       if (user != null) {
-        // MODIFIKASI: Simpan fakultas ke Firestore
+        // Menyimpan fakultas ke profil user
         await _firestoreService.updateUserData(user.uid, {
           'faculty': _selectedFaculty,
         });
@@ -69,40 +71,17 @@ class _FacultySelectionPageState extends State<FacultySelectionPage> {
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (context) => const HomePage()),
-          (route) => false, // Hapus semua halaman sebelumnya
+          (route) => false,
         );
       }
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
-
-      String message;
-      switch (e.code) {
-        case 'email-already-in-use':
-          message = 'Email ini sudah terdaftar.';
-          break;
-        case 'weak-password':
-          message = 'Password terlalu lemah.';
-          break;
-        case 'invalid-email':
-          message = 'Format email tidak valid.';
-          break;
-        default:
-          message = 'Registrasi gagal: ${e.message ?? e.code}';
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: const Color.fromARGB(255, 130, 6, 6),
-        ),
-      );
+      String message = 'Registrasi gagal: ${e.message}';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Terjadi kesalahan: $e'),
-          backgroundColor: const Color.fromARGB(255, 110, 5, 5),
-        ),
+        SnackBar(content: Text('Terjadi kesalahan: $e')),
       );
     } finally {
       if (mounted) {
@@ -176,8 +155,7 @@ class _FacultySelectionPageState extends State<FacultySelectionPage> {
                             ),
                             const SizedBox(height: 32),
                             Container(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 12.0),
+                              padding: const EdgeInsets.symmetric(horizontal: 12.0),
                               decoration: BoxDecoration(
                                 color: Colors.grey[100],
                                 borderRadius: BorderRadius.circular(10.0),
@@ -188,15 +166,10 @@ class _FacultySelectionPageState extends State<FacultySelectionPage> {
                                   isExpanded: true,
                                   value: _selectedFaculty,
                                   hint: const Text('Pilih Fakultas'),
-                                  icon: const Icon(Icons.arrow_drop_down,
-                                      color: primaryColor),
                                   items: _faculties.map((String faculty) {
                                     return DropdownMenuItem<String>(
                                       value: faculty,
-                                      child: Text(
-                                        faculty,
-                                        style: const TextStyle(fontSize: 14),
-                                      ),
+                                      child: Text(faculty, style: const TextStyle(fontSize: 14)),
                                     );
                                   }).toList(),
                                   onChanged: (String? newValue) {
@@ -215,8 +188,7 @@ class _FacultySelectionPageState extends State<FacultySelectionPage> {
                                 onPressed: _isLoading ? null : _register,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: primaryColor,
-                                  disabledBackgroundColor:
-                                      primaryColor.withOpacity(0.6),
+                                  disabledBackgroundColor: primaryColor.withOpacity(0.6),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(10),
                                   ),
@@ -254,3 +226,4 @@ class _FacultySelectionPageState extends State<FacultySelectionPage> {
     );
   }
 }
+
