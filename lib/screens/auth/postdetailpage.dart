@@ -18,6 +18,18 @@ class _PostDetailPageState extends State<PostDetailPage> {
   final TextEditingController _commentController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _isPostingComment = false;
+  bool showFullText = false;
+
+  String getShortContent(String content) {
+    if (content.length <= 125) return content;
+    return content.substring(0, 125) + '...';
+  }
+
+  String formatNumber(int number) {
+    if (number >= 1000000) return '${(number / 1000000).toStringAsFixed(1)}M';
+    if (number >= 1000) return '${(number / 1000).toStringAsFixed(1)}k';
+    return number.toString();
+  }
 
   @override
   void dispose() {
@@ -29,7 +41,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
   Future<void> _toggleLike(bool isCurrentlyLiked) async {
     try {
       await _firestoreService.toggleLike(widget.article.url);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -166,13 +178,15 @@ class _PostDetailPageState extends State<PostDetailPage> {
 
               // Title
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                 child: Row(
                   children: [
                     const Icon(Icons.comment, color: primaryColor, size: 24),
                     const SizedBox(width: 8),
                     StreamBuilder<int>(
-                      stream: _firestoreService.getCommentsCount(widget.article.url),
+                      stream: _firestoreService
+                          .getCommentsCount(widget.article.url),
                       builder: (context, snapshot) {
                         final count = snapshot.data ?? 0;
                         return Text(
@@ -238,10 +252,12 @@ class _PostDetailPageState extends State<PostDetailPage> {
                     final comments = snapshot.data!.docs;
                     return ListView.builder(
                       controller: scrollController,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
                       itemCount: comments.length,
                       itemBuilder: (context, index) {
-                        final comment = comments[index].data() as Map<String, dynamic>;
+                        final comment =
+                            comments[index].data() as Map<String, dynamic>;
                         final timestamp = comment['timestamp'] as Timestamp?;
                         final userEmail = comment['userEmail'] ?? 'Anonymous';
                         final text = comment['text'] ?? '';
@@ -287,7 +303,8 @@ class _PostDetailPageState extends State<PostDetailPage> {
                                         if (timestamp != null) ...[
                                           const SizedBox(width: 8),
                                           Text(
-                                            _formatTimestamp(timestamp.toDate()),
+                                            _formatTimestamp(
+                                                timestamp.toDate()),
                                             style: TextStyle(
                                               fontSize: 12,
                                               color: Colors.grey[600],
@@ -354,7 +371,8 @@ class _PostDetailPageState extends State<PostDetailPage> {
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(25),
-                            borderSide: const BorderSide(color: primaryColor, width: 2),
+                            borderSide:
+                                const BorderSide(color: primaryColor, width: 2),
                           ),
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 20,
@@ -382,7 +400,8 @@ class _PostDetailPageState extends State<PostDetailPage> {
                                   color: Colors.white,
                                 ),
                               )
-                            : const Icon(Icons.send, color: Colors.white, size: 20),
+                            : const Icon(Icons.send,
+                                color: Colors.white, size: 20),
                       ),
                     ),
                   ],
@@ -441,35 +460,9 @@ class _PostDetailPageState extends State<PostDetailPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Image
+                  // Image
                   if (widget.article.urlToImage.isNotEmpty)
-                    isNetworkImage(widget.article.urlToImage)
-                        ? Image.network(
-                            widget.article.urlToImage,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                            headers: {
-                              'User-Agent':
-                                  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                            },
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                height: 300,
-                                color: Colors.grey[300],
-                                child: const Center(
-                                  child: Icon(
-                                    Icons.broken_image,
-                                    size: 100,
-                                    color: Colors.grey,
-                                  ),
-                                ),
-                              );
-                            },
-                          )
-                        : Image.asset(
-                            widget.article.urlToImage,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                          )
+                    buildImage(widget.article.urlToImage)
                   else
                     Container(
                       height: 300,
@@ -486,7 +479,9 @@ class _PostDetailPageState extends State<PostDetailPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          widget.article.content,
+                          showFullText
+                              ? widget.article.content
+                              : getShortContent(widget.article.content),
                           style: const TextStyle(
                             fontSize: 16,
                             height: 1.6,
@@ -494,6 +489,19 @@ class _PostDetailPageState extends State<PostDetailPage> {
                             color: Colors.black87,
                           ),
                         ),
+                        if (widget.article.content.length > 125 &&
+                            !showFullText)
+                          GestureDetector(
+                            onTap: () => setState(() => showFullText = true),
+                            child: const Text(
+                              'Read more',
+                              style: TextStyle(
+                                color: Colors.blue,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Poppins',
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -519,7 +527,10 @@ class _PostDetailPageState extends State<PostDetailPage> {
               children: [
                 // Like button
                 StreamBuilder<bool>(
-                  stream: _firestoreService.isSavedStream(widget.article.url).map((_) => true).handleError((_) => false),
+                  stream: _firestoreService
+                      .isSavedStream(widget.article.url)
+                      .map((_) => true)
+                      .handleError((_) => false),
                   builder: (context, _) {
                     return FutureBuilder<bool>(
                       future: _firestoreService.isLiked(widget.article.url),
@@ -527,7 +538,8 @@ class _PostDetailPageState extends State<PostDetailPage> {
                         final isLiked = snapshot.data ?? false;
 
                         return _ActionButton(
-                          icon: isLiked ? Icons.favorite : Icons.favorite_border,
+                          icon:
+                              isLiked ? Icons.favorite : Icons.favorite_border,
                           color: isLiked ? Colors.red : Colors.grey[700]!,
                           label: 'Like',
                           onTap: () => _toggleLike(isLiked),
@@ -541,7 +553,8 @@ class _PostDetailPageState extends State<PostDetailPage> {
 
                 // Comment button
                 StreamBuilder<int>(
-                  stream: _firestoreService.getCommentsCount(widget.article.url),
+                  stream:
+                      _firestoreService.getCommentsCount(widget.article.url),
                   builder: (context, snapshot) {
                     final count = snapshot.data ?? 0;
 
@@ -615,6 +628,36 @@ class _ActionButton extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+Widget buildImage(String path) {
+  if (path.startsWith("assets/")) {
+    // Kalau path dimulai "assets/", pakai local asset
+    return Image.asset(
+      path,
+      width: double.infinity,
+      fit: BoxFit.cover,
+    );
+  } else {
+    // Kalau URL (http/https), pakai network
+    return Image.network(
+      path,
+      width: double.infinity,
+      fit: BoxFit.cover,
+      headers: {
+        'User-Agent': 'Mozilla/5.0',
+      },
+      errorBuilder: (context, error, stackTrace) {
+        return Container(
+          height: 300,
+          color: Colors.grey[300],
+          child: const Center(
+            child: Icon(Icons.broken_image, size: 100, color: Colors.grey),
+          ),
+        );
+      },
     );
   }
 }
