@@ -92,58 +92,70 @@ class _SearchFeaturesState extends State<SearchFeatures> {
           ),
         ),
       ),
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/images/BG_UNTAR.png'),
-            fit: BoxFit.cover,
+      body: GestureDetector(
+        onTap: () {
+          FocusScope.of(context).unfocus(); // nutup keyboard & suggestions
+          setState(() {
+            suggestions.clear(); // biar dropdown suggestions ilang
+          });
+        },
+        child: Container(
+          width: double.infinity,
+          height: double.infinity,
+          decoration: const BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage('assets/images/BG_UNTAR.png'),
+              fit: BoxFit.cover,
+            ),
           ),
-        ),
-        child: Column(
-          children: [
-            // Suggestions dropdown
-            if (topSuggestions.isNotEmpty && _controller.text.isNotEmpty)
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.95),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 4,
-                      offset: Offset(0, 2),
-                    ),
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : ListView(
+                  padding: const EdgeInsets.all(8),
+                  children: [
+                    if (topSuggestions.isNotEmpty &&
+                        _controller.text.isNotEmpty)
+                      Container(
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.95),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black12,
+                              blurRadius: 4,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: topSuggestions.length,
+                          itemBuilder: (context, idx) {
+                            final suggestion = topSuggestions[idx];
+                            return ListTile(
+                              title: Text(
+                                suggestion,
+                                style: const TextStyle(fontFamily: "Poppins"),
+                              ),
+                              onTap: () {
+                                _controller.text = suggestion;
+                                _searchNews(suggestion);
+                                FocusScope.of(context).unfocus();
+                                setState(() =>
+                                    suggestions.clear()); // tutup dropdown
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    // Feeds
+                    NewsFeedGrid(articles: results),
                   ],
                 ),
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: topSuggestions.length,
-                  itemBuilder: (context, idx) {
-                    final suggestion = topSuggestions[idx];
-                    return ListTile(
-                      title: Text(
-                        suggestion,
-                        style: const TextStyle(fontFamily: "Poppins"),
-                      ),
-                      onTap: () {
-                        _controller.text = suggestion;
-                        _searchNews(suggestion);
-                        FocusScope.of(context).unfocus();
-                      },
-                    );
-                  },
-                ),
-              ),
-            Expanded(
-              child: _isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : NewsFeedGrid(articles: results),
-            ),
-          ],
         ),
       ),
     );
