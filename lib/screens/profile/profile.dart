@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'edit_profile.dart'; 
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -12,9 +16,111 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   String _name = 'Nama Lengkap';
   String _nim = 'NIM';
-  File? _imageFile;
+  String? _profileImageUrl; 
 
   static const Color untarRed = Color.fromARGB(255, 118, 0, 0);
+
+  // digunakan firebase agar jika kita login dalam suatu akun dan mengedit di bagian profilenya
+  // dan kita close mobile programming kita atau kita restart dibagian profilenya akan tetap terlihat
+  // nama, nim dan profile picture yang kita masukkan
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfileData();
+  }
+
+  Future<String?> _uploadImage(File imageFile) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return null;
+
+    try {
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('profile_pictures')
+          .child('${user.uid}.jpg');
+
+      await storageRef.putFile(imageFile);
+      final downloadUrl = await storageRef.getDownloadURL();
+      return downloadUrl;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<void> _saveProfileLocally(String name, String nim, String? imageUrl) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('profile_name', name);
+    await prefs.setString('profile_nim', nim);
+    
+    if (imageUrl != null) {
+      await prefs.setString('profile_image_url', imageUrl);
+    } else {
+      await prefs.remove('profile_image_url');
+    }
+  }
+
+  Future<void> _saveProfileToFirestore(String name, String nim, String? imageUrl) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      try {
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'namaLengkap': name,
+          'nim': nim,
+          'profileImageUrl': imageUrl,
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      } catch (e) {}
+    }
+  }
+
+  Future<void> _loadProfileData() async {
+    setState(() {}
+    );
+
+    final prefs = await SharedPreferences.getInstance();
+    final user = FirebaseAuth.instance.currentUser;
+
+    String? localName = prefs.getString('profile_name');
+    String? localNim = prefs.getString('profile_nim');
+    String? localImageUrl = prefs.getString('profile_image_url');
+
+    if (localName != null && localNim != null) {
+      setState(() {
+        _name = localName;
+        _nim = localNim;
+        _profileImageUrl = localImageUrl;
+      });
+    }
+
+    if (user != null) {
+      try {
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+
+        if (doc.exists) {
+          final data = doc.data();
+          if (data != null) {
+            final loadedName = data['namaLengkap'] as String? ?? 'Nama Lengkap';
+            final loadedNim = data['nim'] as String? ?? 'NIM';
+            final loadedImageUrl = data['profileImageUrl'] as String?;
+
+            if (loadedName != _name || loadedNim != _nim || loadedImageUrl != _profileImageUrl) {
+              setState(() {
+                _name = loadedName;
+                _nim = loadedNim;
+                _profileImageUrl = loadedImageUrl;
+              });
+              _saveProfileLocally(loadedName, loadedNim, loadedImageUrl);
+            }
+          }
+        }
+      } catch (e) {}
+    }
+    setState(() {});
+  }
 
   void _navigateToEditProfile() async {
     final result = await Navigator.push(
@@ -22,12 +128,26 @@ class _ProfilePageState extends State<ProfilePage> {
       MaterialPageRoute(builder: (context) => const EditProfilePage()),
     );
 
-    if (result != null) {
+    if (result != null && result is Map<String, dynamic>) {
+      final newName = result['name'] as String;
+      final newNim = result['nim'] as String;
+      final newImageFile = result['imageFile'] as File?;
+
+      String? finalImageUrl = _profileImageUrl;
+
+      if (newImageFile != null) {
+        final uploadedUrl = await _uploadImage(newImageFile);
+        finalImageUrl = uploadedUrl;
+      }
+
       setState(() {
-        _name = result['name'];
-        _nim = result['nim'];
-        _imageFile = result['imageFile'];
+        _name = newName;
+        _nim = newNim;
+        _profileImageUrl = finalImageUrl;
       });
+
+      await _saveProfileToFirestore(newName, newNim, finalImageUrl);
+      await _saveProfileLocally(newName, newNim, finalImageUrl);
     }
   }
 
@@ -46,13 +166,12 @@ class _ProfilePageState extends State<ProfilePage> {
             color: Colors.white,
           ),
         ),
-        backgroundColor: untarRed, 
+        backgroundColor: untarRed,
         elevation: 0,
         automaticallyImplyLeading: false,
       ),
       body: Stack(
         children: [
-          // 1. Background Image UNTAR
           Container(
             decoration: const BoxDecoration(
               image: DecorationImage(
@@ -61,50 +180,32 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ),
           ),
-          // 2. Overlay Gelap
           Container(
-            color: Colors.black.withOpacity(0.5), 
+            color: Colors.black.withOpacity(0.5),
           ),
-          
-          // 3. Konten Utama (Header & My Uploads)
           SingleChildScrollView(
             child: Column(
               children: [
-                // Bagian Header Profil
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
                     children: [
                       const SizedBox(height: 100),
-                      
-                      // Avatar (Semi-Transparan dengan Ikon Person)
-                      _imageFile != null
-                          ? CircleAvatar(
-                              radius: 60,
-                              backgroundColor: Colors.transparent,
-                              child: ClipOval(
-                                child: Image.file(
-                                  _imageFile!,
-                                  fit: BoxFit.cover,
-                                  width: 120,
-                                  height: 120,
-                                ),
-                              ),
-                            )
-                          : Container(
-                              width: 120, // 2 * radius
-                              height: 120, // 2 * radius
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                // Background abu-abu semi-transparan
-                                color: Colors.grey.withOpacity(0.5), 
-                              ),
-                              child: const Icon(
-                                Icons.person, // Menggunakan ikon person kembali
-                                size: 50, // Ukuran ikon dikecilkan (dari 60 menjadi 50)
+                      // bagian dari profile untuk nama, nim dan profile picturenya
+                      CircleAvatar(
+                        radius: 60,
+                        backgroundColor: Colors.grey.withOpacity(0.5),
+                        backgroundImage: _profileImageUrl != null
+                            ? NetworkImage(_profileImageUrl!)
+                            : null,
+                        child: _profileImageUrl == null
+                            ? const Icon(
+                                Icons.person,
+                                size: 50,
                                 color: Colors.white,
-                              ),
-                            ),
+                              )
+                            : null,
+                      ),
                       
                       const SizedBox(height: 15),
                       Text(
@@ -138,12 +239,11 @@ class _ProfilePageState extends State<ProfilePage> {
                         onPressed: _navigateToEditProfile,
                         icon: Icons.edit,
                       ),
-                      const SizedBox(height: 30), 
+                      const SizedBox(height: 30),
                     ],
                   ),
                 ),
-
-                // Bagian Konten "My Uploads" (Kartu Putih)
+                // Code untuk membuat bagian dari konten yang akan di upload 
                 Container(
                   width: double.infinity,
                   constraints: BoxConstraints(minHeight: screenHeight * 0.55),
@@ -196,7 +296,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                               const SizedBox(height: 20),
                               _UploadButton(),
-                              const SizedBox(height: 80), 
+                              const SizedBox(height: 80),
                             ],
                           ),
                         ),
