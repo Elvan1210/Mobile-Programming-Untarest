@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
-import 'edit_profile.dart'; 
+import 'edit_profile.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'profile_header.dart';
+import 'profile_tabs.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -16,13 +18,10 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   String _name = 'Nama Lengkap';
   String _nim = 'NIM';
-  String? _profileImageUrl; 
+  String? _profileImageUrl;
+  int _selectedTab = 0; // 0: Photos, 1: Liked, 2: Saved
 
   static const Color untarRed = Color.fromARGB(255, 118, 0, 0);
-
-  // digunakan firebase agar jika kita login dalam suatu akun dan mengedit di bagian profilenya
-  // dan kita close mobile programming kita atau kita restart dibagian profilenya akan tetap terlihat
-  // nama, nim dan profile picture yang kita masukkan
 
   @override
   void initState() {
@@ -48,11 +47,12 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  Future<void> _saveProfileLocally(String name, String nim, String? imageUrl) async {
+  Future<void> _saveProfileLocally(
+      String name, String nim, String? imageUrl) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('profile_name', name);
     await prefs.setString('profile_nim', nim);
-    
+
     if (imageUrl != null) {
       await prefs.setString('profile_image_url', imageUrl);
     } else {
@@ -60,7 +60,8 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  Future<void> _saveProfileToFirestore(String name, String nim, String? imageUrl) async {
+  Future<void> _saveProfileToFirestore(
+      String name, String nim, String? imageUrl) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       try {
@@ -75,8 +76,7 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _loadProfileData() async {
-    setState(() {}
-    );
+    setState(() {});
 
     final prefs = await SharedPreferences.getInstance();
     final user = FirebaseAuth.instance.currentUser;
@@ -107,7 +107,9 @@ class _ProfilePageState extends State<ProfilePage> {
             final loadedNim = data['nim'] as String? ?? 'NIM';
             final loadedImageUrl = data['profileImageUrl'] as String?;
 
-            if (loadedName != _name || loadedNim != _nim || loadedImageUrl != _profileImageUrl) {
+            if (loadedName != _name ||
+                loadedNim != _nim ||
+                loadedImageUrl != _profileImageUrl) {
               setState(() {
                 _name = loadedName;
                 _nim = loadedNim;
@@ -153,220 +155,84 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-
     return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        title: const Text(
-          'Profile',
-          style: TextStyle(
-            fontFamily: 'Poppins',
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
+      body: Container(
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage("assets/images/BG_UNTAR.png"),
+            fit: BoxFit.cover,
           ),
         ),
-        backgroundColor: untarRed,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-      ),
-      body: Stack(
-        children: [
-          Container(
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage("assets/images/BG_UNTAR.png"),
-                fit: BoxFit.cover,
+        child: SafeArea(
+          child: Column(
+            children: [
+              // Profile Header Section
+              ProfileHeader(
+                name: _name,
+                nim: _nim,
+                profileImageUrl: _profileImageUrl,
+                onEditPressed: _navigateToEditProfile,
               ),
-            ),
+
+              const SizedBox(height: 20),
+
+              // Tab Buttons Section
+              ProfileTabs(
+                selectedTab: _selectedTab,
+                onTabSelected: (index) {
+                  setState(() {
+                    _selectedTab = index;
+                  });
+                },
+              ),
+
+              const SizedBox(height: 20),
+
+              // Content Section
+              Expanded(
+                child: _buildTabContent(),
+              ),
+            ],
           ),
-          Container(
-            color: Colors.black.withOpacity(0.5),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabContent() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.image_not_supported_outlined,
+            size: 80,
+            color: Colors.white.withOpacity(0.5),
           ),
-          SingleChildScrollView(
-            child: Column(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 100),
-                      // bagian dari profile untuk nama, nim dan profile picturenya
-                      CircleAvatar(
-                        radius: 60,
-                        backgroundColor: Colors.grey.withOpacity(0.5),
-                        backgroundImage: _profileImageUrl != null
-                            ? NetworkImage(_profileImageUrl!)
-                            : null,
-                        child: _profileImageUrl == null
-                            ? const Icon(
-                                Icons.person,
-                                size: 50,
-                                color: Colors.white,
-                              )
-                            : null,
-                      ),
-                      
-                      const SizedBox(height: 15),
-                      Text(
-                        _name,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 26,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
-                          shadows: [
-                            Shadow(color: Colors.black54, blurRadius: 4.0)
-                          ],
-                        ),
-                      ),
-                      Text(
-                        _nim,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 16,
-                          color: Colors.white70,
-                          shadows: [
-                            Shadow(color: Colors.black54, blurRadius: 4.0)
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      _ProfileButton(
-                        text: 'Edit Profile',
-                        onPressed: _navigateToEditProfile,
-                        icon: Icons.edit,
-                      ),
-                      const SizedBox(height: 30),
-                    ],
-                  ),
-                ),
-                // Code untuk membuat bagian dari konten yang akan di upload 
-                Container(
-                  width: double.infinity,
-                  constraints: BoxConstraints(minHeight: screenHeight * 0.55),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(30),
-                      topRight: Radius.circular(30),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black12,
-                        blurRadius: 10,
-                        offset: Offset(0, -5),
-                      ),
-                    ],
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'My Uploads',
-                          style: TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: untarRed,
-                          ),
-                        ),
-                        const Divider(height: 30, color: Colors.grey),
-                        Center(
-                          child: Column(
-                            children: [
-                              const SizedBox(height: 20),
-                              Icon(
-                                Icons.image_not_supported_outlined,
-                                size: 80,
-                                color: Colors.grey[300],
-                              ),
-                              const SizedBox(height: 10),
-                              const Text(
-                                'Belum ada Feeds!',
-                                style: TextStyle(
-                                  fontFamily: 'Poppins',
-                                  color: Colors.grey,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-                              _UploadButton(),
-                              const SizedBox(height: 80),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+          const SizedBox(height: 16),
+          Text(
+            _getEmptyMessage(),
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              color: Colors.white.withOpacity(0.7),
+              fontSize: 16,
             ),
           ),
         ],
       ),
     );
   }
-}
 
-class _ProfileButton extends StatelessWidget {
-  final String text;
-  final VoidCallback onPressed;
-  final IconData icon;
-
-  static const Color untarRed = Color.fromARGB(255, 118, 0, 0);
-
-  const _ProfileButton({
-    required this.text,
-    required this.onPressed,
-    this.icon = Icons.arrow_forward,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ElevatedButton.icon(
-      onPressed: onPressed,
-      icon: Icon(icon, size: 20),
-      label: Text(
-        text,
-        style: const TextStyle(
-          fontFamily: 'Poppins',
-          fontWeight: FontWeight.bold,
-          fontSize: 14,
-        ),
-      ),
-      style: ElevatedButton.styleFrom(
-        foregroundColor: Colors.white,
-        backgroundColor: untarRed,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
-        elevation: 5,
-      ),
-    );
-  }
-}
-
-class _UploadButton extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return OutlinedButton.icon(
-      onPressed: () {},
-      icon: const Icon(Icons.add_circle_outline),
-      label: const Text('Upload Feeds Baru'),
-      style: OutlinedButton.styleFrom(
-        foregroundColor: _ProfilePageState.untarRed,
-        side: const BorderSide(color: _ProfilePageState.untarRed, width: 2),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      ),
-    );
+  String _getEmptyMessage() {
+    switch (_selectedTab) {
+      case 0:
+        return 'Belum ada Feeds!';
+      case 1:
+        return 'Belum ada foto yang disukai!';
+      case 2:
+        return 'Belum ada foto yang disimpan!';
+      default:
+        return 'Belum ada konten!';
+    }
   }
 }
