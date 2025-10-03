@@ -34,28 +34,12 @@ class _FacultySelectionPageState extends State<FacultySelectionPage> {
 
   void _register() async {
     if (_selectedFaculty == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please select a faculty.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a faculty.')),
+      );
       return;
     }
 
-<<<<<<< HEAD
-    final user = await _authService.registerWithEmailAndPassword(
-      widget.email,
-      widget.password,
-    );
-    if (user != null && mounted) {
-      // Logic for saving user data including faculty to Firestore/Database
-      // For now, we'll just navigate to the homepage.
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const HomePage()),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Registration failed. Try again.')),
-=======
     setState(() {
       _isLoading = true;
     });
@@ -64,7 +48,6 @@ class _FacultySelectionPageState extends State<FacultySelectionPage> {
       final user = await _authService.registerWithEmailAndPassword(
         widget.email,
         widget.password,
->>>>>>> 941ece4cccdb7b7e158cd0e3ec8a3ffc8cc677ed
       );
 
       if (user != null && mounted) {
@@ -147,12 +130,6 @@ class _FacultySelectionPageState extends State<FacultySelectionPage> {
                     ],
                   ),
                 ),
-<<<<<<< HEAD
-              ),
-              const SizedBox(height: 20),
-              CustomButton(text: 'Sign Up', onPressed: _register),
-            ],
-=======
                 // Main content
                 Expanded(
                   child: Center(
@@ -189,7 +166,8 @@ class _FacultySelectionPageState extends State<FacultySelectionPage> {
 
                             // Faculty Dropdown
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 12.0),
                               decoration: BoxDecoration(
                                 color: Colors.grey[100],
                                 borderRadius: BorderRadius.circular(10.0),
@@ -200,7 +178,8 @@ class _FacultySelectionPageState extends State<FacultySelectionPage> {
                                   isExpanded: true,
                                   value: _selectedFaculty,
                                   hint: const Text('Select Faculty'),
-                                  icon: const Icon(Icons.arrow_drop_down, color: primaryColor),
+                                  icon: const Icon(Icons.arrow_drop_down,
+                                      color: primaryColor),
                                   items: _faculties.map((String faculty) {
                                     return DropdownMenuItem<String>(
                                       value: faculty,
@@ -228,7 +207,8 @@ class _FacultySelectionPageState extends State<FacultySelectionPage> {
                                 onPressed: _isLoading ? null : _register,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: primaryColor,
-                                  disabledBackgroundColor: primaryColor.withOpacity(0.6),
+                                  disabledBackgroundColor:
+                                      primaryColor.withOpacity(0.6),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(10),
                                   ),
@@ -260,7 +240,6 @@ class _FacultySelectionPageState extends State<FacultySelectionPage> {
                 ),
               ],
             ),
->>>>>>> 941ece4cccdb7b7e158cd0e3ec8a3ffc8cc677ed
           ),
         ],
       ),

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:untarest_app/screens/home/home_page.dart';
 import 'package:untarest_app/utils/constants.dart';
 import 'package:untarest_app/services/search_service.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
@@ -175,10 +174,15 @@ class _SearchFeaturesState extends State<SearchFeatures> {
                                             article.urlToImage,
                                             fit: BoxFit.cover,
                                             headers: {
-                                              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                                              'User-Agent':
+                                                  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                                             },
-                                            errorBuilder: (context, error, stackTrace) {
-                                              return const Icon(Icons.broken_image, size: 50, color: Colors.grey);
+                                            errorBuilder:
+                                                (context, error, stackTrace) {
+                                              return const Icon(
+                                                  Icons.broken_image,
+                                                  size: 50,
+                                                  color: Colors.grey);
                                             },
                                           )
                                         : Image.asset(

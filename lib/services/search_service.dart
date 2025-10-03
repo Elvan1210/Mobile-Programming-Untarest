@@ -1,8 +1,6 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:flutter/services.dart' show rootBundle;
 import '../models/search_news.dart';
-
 
 class SearchService {
   final String _apiKey = '0702315d93b4449da653d0ea0531bfef';

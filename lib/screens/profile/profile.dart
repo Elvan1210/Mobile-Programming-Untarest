@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
-import 'edit_profile.dart'; 
+import 'edit_profile.dart';
+import 'package:untarest_app/models/post_model.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -13,6 +14,8 @@ class _ProfilePageState extends State<ProfilePage> {
   String _name = 'Nama Lengkap';
   String _nim = 'NIM';
   File? _imageFile;
+
+  List<UserPost> userPosts = [];
 
   static const Color untarRed = Color.fromARGB(255, 118, 0, 0);
 
@@ -46,7 +49,7 @@ class _ProfilePageState extends State<ProfilePage> {
             color: Colors.white,
           ),
         ),
-        backgroundColor: untarRed, 
+        backgroundColor: untarRed,
         elevation: 0,
         automaticallyImplyLeading: false,
       ),
@@ -63,9 +66,9 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           // 2. Overlay Gelap
           Container(
-            color: Colors.black.withOpacity(0.5), 
+            color: Colors.black.withOpacity(0.5),
           ),
-          
+
           // 3. Konten Utama (Header & My Uploads)
           SingleChildScrollView(
             child: Column(
@@ -76,7 +79,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   child: Column(
                     children: [
                       const SizedBox(height: 100),
-                      
+
                       // Avatar (Semi-Transparan dengan Ikon Person)
                       _imageFile != null
                           ? CircleAvatar(
@@ -97,15 +100,16 @@ class _ProfilePageState extends State<ProfilePage> {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 // Background abu-abu semi-transparan
-                                color: Colors.grey.withOpacity(0.5), 
+                                color: Colors.grey.withOpacity(0.5),
                               ),
                               child: const Icon(
                                 Icons.person, // Menggunakan ikon person kembali
-                                size: 50, // Ukuran ikon dikecilkan (dari 60 menjadi 50)
+                                size:
+                                    50, // Ukuran ikon dikecilkan (dari 60 menjadi 50)
                                 color: Colors.white,
                               ),
                             ),
-                      
+
                       const SizedBox(height: 15),
                       Text(
                         _name,
@@ -138,7 +142,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         onPressed: _navigateToEditProfile,
                         icon: Icons.edit,
                       ),
-                      const SizedBox(height: 30), 
+                      const SizedBox(height: 30),
                     ],
                   ),
                 ),
@@ -176,30 +180,41 @@ class _ProfilePageState extends State<ProfilePage> {
                           ),
                         ),
                         const Divider(height: 30, color: Colors.grey),
-                        Center(
-                          child: Column(
-                            children: [
-                              const SizedBox(height: 20),
-                              Icon(
-                                Icons.image_not_supported_outlined,
-                                size: 80,
-                                color: Colors.grey[300],
-                              ),
-                              const SizedBox(height: 10),
-                              const Text(
-                                'Belum ada Feeds!',
-                                style: TextStyle(
-                                  fontFamily: 'Poppins',
-                                  color: Colors.grey,
-                                  fontSize: 16,
+                        userPosts.isEmpty
+                            ? Column(
+                                children: [
+                                  const SizedBox(height: 20),
+                                  Icon(Icons.image_not_supported_outlined,
+                                      size: 80, color: Colors.grey[300]),
+                                  const SizedBox(height: 10),
+                                  const Text("Belum ada Feeds!",
+                                      style: TextStyle(color: Colors.grey)),
+                                  const SizedBox(height: 20),
+                                  _UploadButton(),
+                                  const SizedBox(height: 80),
+                                ],
+                              )
+                            : GridView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                gridDelegate:
+                                    const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 3,
+                                  crossAxisSpacing: 8,
+                                  mainAxisSpacing: 8,
                                 ),
+                                itemCount: userPosts.length,
+                                itemBuilder: (context, index) {
+                                  final post = userPosts[index];
+                                  return ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.file(
+                                      File(post.imagePath),
+                                      fit: BoxFit.cover,
+                                    ),
+                                  );
+                                },
                               ),
-                              const SizedBox(height: 20),
-                              _UploadButton(),
-                              const SizedBox(height: 80), 
-                            ],
-                          ),
-                        ),
                       ],
                     ),
                   ),

@@ -62,39 +62,11 @@ class _LoginPageState extends State<LoginPage> {
                     color: primaryColor,
                   ),
                 ),
-<<<<<<< HEAD
-              ),
-              const SizedBox(height: 50),
-              CustomTextField(
-                controller: _emailController,
-                hintText: 'Enter your email',
-                icon: Icons.email,
-              ),
-              CustomTextField(
-                controller: _passwordController,
-                hintText: 'Enter your password',
-                obscureText: true,
-                icon: Icons.lock,
-              ),
-              CustomButton(text: 'Login', onPressed: _login),
-              const SizedBox(height: 20),
-              TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const SignupPage()),
-                  );
-                },
-                child: const Text(
-                  'Don\'t have an account? Create an account',
-                  style: TextStyle(color: primaryColor),
-=======
                 const SizedBox(height: 50),
                 CustomTextField(
                   controller: _emailController,
                   hintText: 'Enter your email',
                   icon: Icons.email,
->>>>>>> 941ece4cccdb7b7e158cd0e3ec8a3ffc8cc677ed
                 ),
                 CustomTextField(
                   controller: _passwordController,
