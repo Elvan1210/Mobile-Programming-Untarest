@@ -3,16 +3,37 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 
 class EditProfilePage extends StatefulWidget {
-  const EditProfilePage({super.key});
+  final String initialName;
+  final String initialNim;
+  final String initialUsername;
+  final String? initialImageUrl;
+
+  const EditProfilePage({
+    super.key,
+    required this.initialName,
+    required this.initialNim,
+    required this.initialUsername,
+    this.initialImageUrl,
+  });
 
   @override
   State<EditProfilePage> createState() => _EditProfilePageState();
 }
 
 class _EditProfilePageState extends State<EditProfilePage> {
-  final _nameController = TextEditingController();
-  final _nimController = TextEditingController();
+  late TextEditingController _nameController;
+  late TextEditingController _nimController;
+  late TextEditingController _usernameController;
+  
   File? _imageFile;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.initialName);
+    _nimController = TextEditingController(text: widget.initialNim);
+    _usernameController = TextEditingController(text: widget.initialUsername);
+  }
 
   Future<void> _pickImage() async {
     final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
@@ -23,11 +44,47 @@ class _EditProfilePageState extends State<EditProfilePage> {
     }
   }
 
+  void _saveProfile() {
+    final newName = _nameController.text;
+    final newNim = _nimController.text;
+    final newUsername = _usernameController.text;
+
+    Navigator.pop(context, {
+      'name': newName,
+      'nim': newNim,
+      'username': newUsername,
+      'imageFile': _imageFile,
+    });
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
     _nimController.dispose();
+    _usernameController.dispose();
     super.dispose();
+  }
+
+  Widget _buildProfileImage() {
+    if (_imageFile != null) {
+      return ClipOval(
+        child: Image.file(_imageFile!, fit: BoxFit.cover, width: 120, height: 120),
+      );
+    } else if (widget.initialImageUrl != null && widget.initialImageUrl!.isNotEmpty) {
+      return ClipOval(
+        child: Image.network(
+          widget.initialImageUrl!,
+          fit: BoxFit.cover,
+          width: 120,
+          height: 120,
+          errorBuilder: (context, error, stackTrace) {
+            return const Icon(Icons.person, size: 60, color: Colors.white);
+          },
+        ),
+      );
+    } else {
+      return const Icon(Icons.camera_alt, size: 40, color: Colors.white);
+    }
   }
 
   @override
@@ -60,16 +117,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     child: CircleAvatar(
                       radius: 60,
                       backgroundColor: Colors.grey.withOpacity(0.7),
-                      child: _imageFile != null
-                          ? ClipOval(
-                              child: Image.file(
-                                _imageFile!,
-                                fit: BoxFit.cover,
-                                width: 120,
-                                height: 120,
-                              ),
-                            )
-                          : const Icon(Icons.camera_alt, size: 40, color: Colors.white),
+                      child: _buildProfileImage(),
                     ),
                   ),
                   const SizedBox(height: 30),
@@ -82,52 +130,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     ),
                     child: Column(
                       children: [
-                        TextField(
-                          controller: _nameController,
-                          decoration: InputDecoration(
-                            labelText: 'Nama Lengkap',
-                            labelStyle: const TextStyle(color: Colors.black54),
-                            filled: true,
-                            fillColor: Colors.white,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide.none,
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: const BorderSide(color: Color.fromARGB(255, 118, 0, 0)),
-                            ),
-                          ),
-                        ),
+                        _buildTextField(_nameController, 'Nama Lengkap'),
                         const SizedBox(height: 20),
-                        TextField(
-                          controller: _nimController,
-                          decoration: InputDecoration(
-                            labelText: 'NIM',
-                            labelStyle: const TextStyle(color: Colors.black54),
-                            filled: true,
-                            fillColor: Colors.white,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide.none,
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: const BorderSide(color: Color.fromARGB(255, 118, 0, 0)),
-                            ),
-                          ),
-                        ),
+                        // PERBAIKAN: Menghapus `isEnabled: false` agar NIM bisa diubah
+                        _buildTextField(_nimController, 'NIM'),
+                        const SizedBox(height: 20),
+                        _buildTextField(_usernameController, 'Username'), 
                         const SizedBox(height: 30),
                         ElevatedButton(
-                          onPressed: () {
-                            final newName = _nameController.text;
-                            final newNim = _nimController.text;
-                            Navigator.pop(context, {
-                              'name': newName,
-                              'nim': newNim,
-                              'imageFile': _imageFile,
-                            });
-                          },
+                          onPressed: _saveProfile,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color.fromARGB(255, 118, 0, 0),
                             padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
@@ -150,13 +161,35 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
           Positioned(
             top: 20, 
-            left: 5,  
+            left: 5, 
             child: IconButton(
               icon: const Icon(Icons.arrow_back, color: Colors.black, size: 24), 
               onPressed: () => Navigator.pop(context),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildTextField(TextEditingController controller, String label, {bool isEnabled = true}) {
+    return TextField(
+      controller: controller,
+      enabled: isEnabled,
+      style: TextStyle(color: isEnabled ? Colors.black : Colors.grey[700]),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(color: isEnabled ? Colors.black54 : Colors.grey),
+        filled: true,
+        fillColor: Colors.white,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Color.fromARGB(255, 118, 0, 0)),
+        ),
       ),
     );
   }
