@@ -217,5 +217,10 @@ class FirestoreService {
     if (currentUserId == null) return Stream.empty();
     return _firestore.collection('users').doc(currentUserId).collection('savedPosts').orderBy('timestamp', descending: true).snapshots();
   }
+
+Stream<QuerySnapshot> getLikedPosts() {
+  if (currentUserId == null) return Stream.empty();
+  return _firestore.collection('users').doc(currentUserId).collection('likedPosts').orderBy('timestamp', descending: true).snapshots();
+}
 }
 

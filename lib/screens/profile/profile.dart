@@ -9,6 +9,8 @@ import 'profile_header.dart';
 import 'profile_tabs.dart';
 import 'package:untarest_app/services/auth_service.dart';
 import 'package:untarest_app/screens/auth/login_page.dart';
+import 'package:untarest_app/widgets/liked_posts_grid.dart';
+import 'package:untarest_app/widgets/saved_posts_grid.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -305,40 +307,19 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildTabContent() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.image_not_supported_outlined,
-            size: 80,
-            color: Colors.white.withOpacity(0.5),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            _getEmptyMessage(),
-            style: TextStyle(
-              fontFamily: 'Poppins',
-              color: Colors.white.withOpacity(0.7),
-              fontSize: 16,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _getEmptyMessage() {
+    Widget _buildTabContent() {
     switch (_selectedTab) {
       case 0:
-        return 'Belum ada Feeds!';
+        // Tab untuk Feeds
+        return const Center(child: Text('Feed Anda akan muncul di sini', style: TextStyle(color: Colors.white)));
       case 1:
-        return 'Belum ada foto yang disukai!';
+        // Tab Like
+        return const LikedPostsGrid();
       case 2:
-        return 'Belum ada foto yang disimpan!';
+        // Tab Save
+        return const SavedPostsGrid(); 
       default:
-        return 'Belum ada konten!';
+        return const Center(child: Text('Konten tidak tersedia.', style: TextStyle(color: Colors.white)));
     }
   }
 }
