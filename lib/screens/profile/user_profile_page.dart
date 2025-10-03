@@ -55,10 +55,10 @@ class _UserProfilePageState extends State<UserProfilePage> {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('Profil', style: TextStyle(fontFamily: 'Poppins', color: Colors.white)),
+        title: const Text('Profil', style: TextStyle(fontFamily: 'Poppins', color: Colors.black)),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: Colors.black),
       ),
       body: Container(
         decoration: const BoxDecoration(
@@ -74,7 +74,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
               return const Center(child: CircularProgressIndicator(color: primaryColor));
             }
             if (!snapshot.hasData || !snapshot.data!.exists) {
-              return const Center(child: Text('Pengguna tidak ditemukan.', style: TextStyle(color: Colors.white)));
+              return const Center(child: Text('Pengguna tidak ditemukan.', style: TextStyle(color: Colors.black)));
             }
 
             final userData = snapshot.data!.data() as Map<String, dynamic>;
@@ -89,7 +89,6 @@ class _UserProfilePageState extends State<UserProfilePage> {
                     name: username,
                     nim: nim,
                     profileImageUrl: profileImageUrl,
-                    onEditPressed: () {},
                   ),
                   const SizedBox(height: 20),
                   _buildStatsRow(),
@@ -103,13 +102,13 @@ class _UserProfilePageState extends State<UserProfilePage> {
                             : _buildFollowButton(),
                   ),
                   const SizedBox(height: 20),
-                  const Divider(color: Colors.white54, indent: 20, endIndent: 20),
+                  const Divider(color: Colors.black38, indent: 20, endIndent: 20),
                   const Padding(
                     padding: EdgeInsets.all(16.0),
                     child: Center(
                       child: Text(
                         'Pengguna ini belum mengupload foto.',
-                        style: TextStyle(fontFamily: 'Poppins', color: Colors.white70),
+                        style: TextStyle(fontFamily: 'Poppins', color: Colors.black54),
                       ),
                     ),
                   ),
@@ -142,12 +141,12 @@ class _UserProfilePageState extends State<UserProfilePage> {
             Text(
               count.toString(),
               style: const TextStyle(
-                color: Colors.white,
+                color: Colors.black,
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
               ),
             ),
-            Text(label, style: const TextStyle(color: Colors.white70)),
+            Text(label, style: const TextStyle(color: Colors.black54)),
           ],
         );
       },
@@ -159,10 +158,10 @@ class _UserProfilePageState extends State<UserProfilePage> {
       return OutlinedButton(
         onPressed: _handleUnfollow,
         style: OutlinedButton.styleFrom(
-          side: const BorderSide(color: Colors.white),
+          side: const BorderSide(color: Colors.black54),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
-        child: const Text('Following', style: TextStyle(color: Colors.white, fontFamily: 'Poppins')),
+        child: const Text('Following', style: TextStyle(color: Colors.black, fontFamily: 'Poppins')),
       );
     } else {
       return ElevatedButton(
