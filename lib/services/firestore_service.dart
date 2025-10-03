@@ -7,9 +7,88 @@ class FirestoreService {
 
   String? get currentUserId => _auth.currentUser?.uid;
 
-  // --- FUNGSI BARU UNTUK MENGAMBIL DATA USER ---
+  // --- FUNGSI UNTUK DATA USER ---
   Future<DocumentSnapshot> getUserData(String userId) {
     return _firestore.collection('users').doc(userId).get();
+  }
+
+  // --- FUNGSI PENCARIAN USER ---
+  Future<QuerySnapshot> searchUsers(String query) async {
+    if (query.isEmpty) {
+      return _firestore.collection('users').limit(0).get();
+    }
+    return _firestore
+        .collection('users')
+        .where('username', isGreaterThanOrEqualTo: query.toLowerCase())
+        .where('username', isLessThanOrEqualTo: '${query.toLowerCase()}\uf8ff')
+        .limit(10)
+        .get();
+  }
+  
+  // --- FUNGSI-FUNGSI BARU UNTUK FOLLOW/UNFOLLOW ---
+  Future<void> followUser(String userIdToFollow) async {
+    if (currentUserId == null) return;
+    
+    await _firestore
+        .collection('users')
+        .doc(currentUserId)
+        .collection('following')
+        .doc(userIdToFollow)
+        .set({});
+        
+    await _firestore
+        .collection('users')
+        .doc(userIdToFollow)
+        .collection('followers')
+        .doc(currentUserId)
+        .set({});
+  }
+
+  Future<void> unfollowUser(String userIdToUnfollow) async {
+    if (currentUserId == null) return;
+
+    await _firestore
+        .collection('users')
+        .doc(currentUserId)
+        .collection('following')
+        .doc(userIdToUnfollow)
+        .delete();
+
+    await _firestore
+        .collection('users')
+        .doc(userIdToUnfollow)
+        .collection('followers')
+        .doc(currentUserId)
+        .delete();
+  }
+
+  Future<bool> isFollowing(String otherUserId) async {
+    if (currentUserId == null) return false;
+    final doc = await _firestore
+        .collection('users')
+        .doc(currentUserId)
+        .collection('following')
+        .doc(otherUserId)
+        .get();
+    return doc.exists;
+  }
+
+  Stream<int> getFollowersCount(String userId) {
+    return _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('followers')
+        .snapshots()
+        .map((snapshot) => snapshot.size);
+  }
+
+  Stream<int> getFollowingCount(String userId) {
+    return _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('following')
+        .snapshots()
+        .map((snapshot) => snapshot.size);
   }
 
   // --- FUNGSI addComment YANG SUDAH DIPERBAIKI ---
@@ -21,25 +100,20 @@ class FirestoreService {
     final postRef = _firestore.collection('posts').doc(postId);
 
     try {
-      // 1. Ambil data user saat ini untuk mendapatkan username
       final userDoc = await getUserData(currentUserId!);
-      // Ambil username dari dokumen. Jika tidak ada, fallback ke 'user_gagal'
       final username = (userDoc.data() as Map<String, dynamic>?)?['username'] ?? 'user_gagal';
 
       await _firestore.runTransaction((transaction) async {
         final postDoc = await transaction.get(postRef);
-
         final commentRef = postRef.collection('comments').doc();
         
-        // 2. Simpan USERNAME, bukan lagi userEmail atau Anonymous
         transaction.set(commentRef, {
           'userId': currentUserId,
-          'username': username, // <-- INI YANG PALING PENTING
+          'username': username,
           'text': commentText.trim(),
           'timestamp': FieldValue.serverTimestamp(),
         });
 
-        // Update comment count
         if (postDoc.exists) {
           final currentCount = postDoc.data()?['commentCount'] ?? 0;
           transaction.update(postRef, {'commentCount': currentCount + 1});
@@ -61,8 +135,6 @@ class FirestoreService {
   }
 
   // --- SISA KODE LAINNYA ---
-  // (Fungsi-fungsi di bawah ini sudah benar dan tidak perlu diubah)
-
   Future<void> updateUserData(String userId, Map<String, dynamic> data) async {
     try {
       await _firestore.collection('users').doc(userId).set(data, SetOptions(merge: true));
@@ -113,16 +185,13 @@ class FirestoreService {
 
   Future<void> toggleLike(String articleUrl) async {
     if (currentUserId == null) return;
-
     final postId = _getPostId(articleUrl);
     final postRef = _firestore.collection('posts').doc(postId);
     final userLikeRef = _firestore.collection('users').doc(currentUserId).collection('likedPosts').doc(postId);
-
     try {
       await _firestore.runTransaction((transaction) async {
         final postDoc = await transaction.get(postRef);
         final userLikeDoc = await transaction.get(userLikeRef);
-
         if (userLikeDoc.exists) {
           transaction.delete(userLikeRef);
           if (postDoc.exists) {
@@ -162,12 +231,10 @@ class FirestoreService {
     final postId = _getPostId(articleUrl);
     final postRef = _firestore.collection('posts').doc(postId);
     final userSaveRef = _firestore.collection('users').doc(currentUserId).collection('savedPosts').doc(postId);
-
     try {
       await _firestore.runTransaction((transaction) async {
         final postDoc = await transaction.get(postRef);
         final userSaveDoc = await transaction.get(userSaveRef);
-
         if (userSaveDoc.exists) {
           transaction.delete(userSaveRef);
           if (postDoc.exists) {

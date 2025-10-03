@@ -8,9 +8,11 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'profile_header.dart';
 import 'profile_tabs.dart';
 import 'package:untarest_app/services/auth_service.dart';
+import 'package:untarest_app/services/firestore_service.dart';
 import 'package:untarest_app/screens/auth/login_page.dart';
 import 'package:untarest_app/widgets/liked_posts_grid.dart';
 import 'package:untarest_app/widgets/saved_posts_grid.dart';
+import 'package:untarest_app/utils/constants.dart'; // Pastikan import ini ada
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -21,6 +23,7 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   final AuthService _authService = AuthService();
+  final FirestoreService _firestoreService = FirestoreService();
 
   String _name = 'Nama Lengkap';
   String _nim = 'NIM';
@@ -37,11 +40,8 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> _logout() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-
       await prefs.remove('keepMeLoggedIn');
-      
       await _authService.signOut();
-
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const LoginPage()),
@@ -60,16 +60,13 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<String?> _uploadImage(File imageFile) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return null;
-
     try {
       final storageRef = FirebaseStorage.instance
           .ref()
           .child('profile_pictures')
           .child('${user.uid}.jpg');
-
       await storageRef.putFile(imageFile);
-      final downloadUrl = await storageRef.getDownloadURL();
-      return downloadUrl;
+      return await storageRef.getDownloadURL();
     } catch (e) {
       return null;
     }
@@ -81,7 +78,6 @@ class _ProfilePageState extends State<ProfilePage> {
     await prefs.setString('profile_name', name);
     await prefs.setString('profile_nim', nim);
     await prefs.setString('profile_username', username);
-
     if (imageUrl != null) {
       await prefs.setString('profile_image_url', imageUrl);
     } else {
@@ -93,19 +89,16 @@ class _ProfilePageState extends State<ProfilePage> {
       String name, String nim, String username, String? imageUrl) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return 'User tidak login.';
-
     if (_username != username) {
       final usernameCheck = await FirebaseFirestore.instance
           .collection('users')
           .where('username', isEqualTo: username)
           .limit(1)
           .get();
-
       if (usernameCheck.docs.isNotEmpty) {
         return 'Username sudah digunakan oleh akun lain.';
       }
     }
-    
     try {
       await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
         'namaLengkap': name,
@@ -121,57 +114,42 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Future<void> _loadProfileData() async {
-    setState(() {});
-
     final prefs = await SharedPreferences.getInstance();
     final user = FirebaseAuth.instance.currentUser;
 
-    String? localName = prefs.getString('profile_name');
-    String? localNim = prefs.getString('profile_nim');
-    String? localUsername = prefs.getString('profile_username');
-    String? localImageUrl = prefs.getString('profile_image_url');
-
-    if (localName != null && localNim != null && localUsername != null) {
+    if(mounted) {
       setState(() {
-        _name = localName;
-        _nim = localNim;
-        _username = localUsername;
-        _profileImageUrl = localImageUrl;
+        _name = prefs.getString('profile_name') ?? 'Nama Lengkap';
+        _nim = prefs.getString('profile_nim') ?? 'NIM';
+        _username = prefs.getString('profile_username') ?? 'username';
+        _profileImageUrl = prefs.getString('profile_image_url');
       });
     }
 
     if (user != null) {
       try {
-        final doc = await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .get();
-
+        final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
         if (doc.exists) {
           final data = doc.data();
-          if (data != null) {
+          if (data != null && mounted) {
             final loadedName = data['namaLengkap'] as String? ?? 'Nama Lengkap';
             final loadedNim = data['nim'] as String? ?? 'NIM';
             final loadedUsername = data['username'] as String? ?? 'username';
             final loadedImageUrl = data['profileImageUrl'] as String?;
-
-            if (loadedName != _name ||
-                loadedNim != _nim ||
-                loadedUsername != _username ||
-                loadedImageUrl != _profileImageUrl) {
-              setState(() {
-                _name = loadedName;
-                _nim = loadedNim;
-                _username = loadedUsername;
-                _profileImageUrl = loadedImageUrl;
-              });
-              _saveProfileLocally(loadedName, loadedNim, loadedUsername, loadedImageUrl);
-            }
+            
+            setState(() {
+              _name = loadedName;
+              _nim = loadedNim;
+              _username = loadedUsername;
+              _profileImageUrl = loadedImageUrl;
+            });
+            await _saveProfileLocally(loadedName, loadedNim, loadedUsername, loadedImageUrl);
           }
         }
-      } catch (e) {}
+      } catch (e) {
+        // Handle error jika perlu
+      }
     }
-    setState(() {});
   }
 
   void _navigateToEditProfile() async {
@@ -192,7 +170,6 @@ class _ProfilePageState extends State<ProfilePage> {
       final newNim = result['nim'] as String;
       final newUsername = result['username'] as String;
       final newImageFile = result['imageFile'] as File?;
-
       String? finalImageUrl = _profileImageUrl;
 
       if (newImageFile != null) {
@@ -201,7 +178,6 @@ class _ProfilePageState extends State<ProfilePage> {
       }
 
       final error = await _saveProfileToFirestore(newName, newNim, newUsername, finalImageUrl);
-
       if (error != null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -217,47 +193,18 @@ class _ProfilePageState extends State<ProfilePage> {
         _username = newUsername;
         _profileImageUrl = finalImageUrl;
       });
-
       await _saveProfileLocally(newName, newNim, newUsername, finalImageUrl);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    const double usernameBoxTotalWidth = 170.0; 
-
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leadingWidth: usernameBoxTotalWidth, 
-        
-        leading: Row( 
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(left: 16.0, top: 10.0),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: const Color.fromARGB(255, 118, 0, 0),
-                  borderRadius: BorderRadius.circular(10), 
-                ),
-                child: Text(
-                  'Username: $_username',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    fontFamily: 'Poppins',
-                  ),
-                  softWrap: false,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ),
-          ],
-        ),
+        title: null, // Hapus title dari AppBar
         actions: [
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.white),
@@ -277,15 +224,27 @@ class _ProfilePageState extends State<ProfilePage> {
           top: false,
           child: Column(
             children: [
+              // --- PERUBAHAN DI SINI ---
+              // ProfileHeader sekarang menampilkan nama lengkap & NIM
               ProfileHeader(
-                name: _name,
-                nim: _nim,
+                name: _name, // Nama Lengkap
+                nim: _nim,  // NIM
                 profileImageUrl: _profileImageUrl,
                 onEditPressed: _navigateToEditProfile,
               ),
-
+              // Menambahkan Username di bawah Header
+              Text(
+                '@$_username',
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: primaryColor, // Warna merah
+                ),
+              ),
               const SizedBox(height: 20),
-
+              _buildStatsRow(),
+              const SizedBox(height: 20),
               ProfileTabs(
                 selectedTab: _selectedTab,
                 onTabSelected: (index) {
@@ -294,9 +253,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   });
                 },
               ),
-
               const SizedBox(height: 20),
-
               Expanded(
                 child: _buildTabContent(),
               ),
@@ -307,19 +264,55 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-    Widget _buildTabContent() {
+  Widget _buildStatsRow() {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return const SizedBox.shrink();
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        _buildStatItem("Followers", _firestoreService.getFollowersCount(userId)),
+        _buildStatItem("Following", _firestoreService.getFollowingCount(userId)),
+      ],
+    );
+  }
+
+  Widget _buildStatItem(String label, Stream<int> stream) {
+    return StreamBuilder<int>(
+      stream: stream,
+      builder: (context, snapshot) {
+        final count = snapshot.data ?? 0;
+        return Column(
+          children: [
+            Text(
+              count.toString(),
+              style: const TextStyle(
+                  color: Colors.black,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16),
+            ),
+            Text(label, style: const TextStyle(color: Colors.black54)),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildTabContent() {
     switch (_selectedTab) {
       case 0:
-        // Tab untuk Feeds
-        return const Center(child: Text('Feed Anda akan muncul di sini', style: TextStyle(color: Colors.white)));
+        return const Center(
+            child: Text('Feed Anda akan muncul di sini',
+                style: TextStyle(color: Colors.black54)));
       case 1:
-        // Tab Like
         return const LikedPostsGrid();
       case 2:
-        // Tab Save
-        return const SavedPostsGrid(); 
+        return const SavedPostsGrid();
       default:
-        return const Center(child: Text('Konten tidak tersedia.', style: TextStyle(color: Colors.white)));
+        return const Center(
+            child: Text('Konten tidak tersedia.',
+                style: TextStyle(color: Colors.black54)));
     }
   }
 }
+
