@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'dart:io';
+import 'dart:async';
 import 'edit_profile.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'profile_header.dart';
 import 'profile_tabs.dart';
 import 'package:untarest_app/services/auth_service.dart';
@@ -31,17 +30,27 @@ class _ProfilePageState extends State<ProfilePage> {
   String _username = 'username';
   String? _profileImageUrl;
   int _selectedTab = 0;
+  StreamSubscription<String>? _profileUpdateSubscription;
+  int _headerKey = 0; // Key to force ProfileHeader rebuild
 
   @override
   void initState() {
     super.initState();
     _loadProfileData();
+    
+    // Listen for profile updates from anywhere in the app
+    _profileUpdateSubscription = FirestoreService.profileUpdateStream.listen((userId) {
+      final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+      if (currentUserId == userId) {
+        _loadProfileData();
+      }
+    });
   }
 
   Future<void> _logout() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.clear(); // Menghapus semua data SharedPreferences saat logout
+      await prefs.clear();
       await _authService.signOut();
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
@@ -58,67 +67,13 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  Future<String?> _uploadImage(File imageFile) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return null;
-    try {
-      final storageRef = FirebaseStorage.instance
-          .ref()
-          .child('profile_pictures')
-          .child('${user.uid}.jpg');
-      await storageRef.putFile(imageFile);
-      return await storageRef.getDownloadURL();
-    } catch (e) {
-      return null;
-    }
-  }
-
-  Future<void> _saveProfileLocally(
-      String name, String nim, String username, String? imageUrl) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('profile_name', name);
-    await prefs.setString('profile_nim', nim);
-    await prefs.setString('profile_username', username);
-    if (imageUrl != null) {
-      await prefs.setString('profile_image_url', imageUrl);
-    } else {
-      await prefs.remove('profile_image_url');
-    }
-  }
-
-  Future<String?> _saveProfileToFirestore(
-      String name, String nim, String username, String? imageUrl) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return 'User tidak login.';
-    if (_username != username && username.isNotEmpty) {
-      final usernameCheck = await FirebaseFirestore.instance
-          .collection('users')
-          .where('username', isEqualTo: username)
-          .limit(1)
-          .get();
-      if (usernameCheck.docs.isNotEmpty) {
-        return 'Username sudah digunakan oleh akun lain.';
-      }
-    }
-    try {
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-        'namaLengkap': name,
-        'nim': nim,
-        'username': username,
-        'profileImageUrl': imageUrl,
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-      return null;
-    } catch (e) {
-      return 'Gagal menyimpan ke Firestore: $e';
-    }
-  }
-
   Future<void> _loadProfileData() async {
-    final prefs = await SharedPreferences.getInstance();
     final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
 
-    if(mounted) {
+    // Load from local storage first
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
       setState(() {
         _name = prefs.getString('profile_name') ?? 'Nama Lengkap';
         _nim = prefs.getString('profile_nim') ?? 'NIM';
@@ -127,33 +82,38 @@ class _ProfilePageState extends State<ProfilePage> {
       });
     }
 
-    if (user != null) {
-      try {
-        final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-        if (doc.exists) {
-          final data = doc.data();
-          if (data != null && mounted) {
-            final loadedName = data['namaLengkap'] as String? ?? 'Nama Lengkap';
-            final loadedNim = data['nim'] as String? ?? 'NIM';
-            final loadedUsername = data['username'] as String? ?? 'username';
-            final loadedImageUrl = data['profileImageUrl'] as String?;
-            
-            setState(() {
-              _name = loadedName;
-              _nim = loadedNim;
-              _username = loadedUsername;
-              _profileImageUrl = loadedImageUrl;
-            });
-            await _saveProfileLocally(loadedName, loadedNim, loadedUsername, loadedImageUrl);
-          }
-        }
-      } catch (e) {
-        // Handle error jika perlu
+    // Then load fresh data from Firestore
+    try {
+      final profileData = await _firestoreService.getCompleteUserProfile(user.uid);
+      if (profileData != null && mounted) {
+        final loadedName = profileData['namaLengkap'] as String? ?? 'Nama Lengkap';
+        final loadedNim = profileData['nim'] as String? ?? 'NIM';
+        final loadedUsername = profileData['username'] as String? ?? 'username';
+        final loadedImageUrl = profileData['profileImageUrl'] as String?;
+
+        setState(() {
+          _name = loadedName;
+          _nim = loadedNim;
+          _username = loadedUsername;
+          _profileImageUrl = loadedImageUrl;
+        });
+        
+        await _firestoreService.syncProfileLocally(user.uid);
       }
+    } catch (e) {
+      debugPrint('Error loading profile data: $e');
     }
   }
 
   void _navigateToEditProfile() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('User tidak login')),
+      );
+      return;
+    }
+
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
@@ -161,41 +121,36 @@ class _ProfilePageState extends State<ProfilePage> {
           initialName: _name,
           initialNim: _nim,
           initialUsername: _username,
-          initialImageUrl: _profileImageUrl, userId: '',
+          initialImageUrl: _profileImageUrl,
+          userId: user.uid,
         ),
       ),
     );
 
-    if (result != null && result is Map<String, dynamic>) {
-      final newName = result['name'] as String;
-      final newNim = result['nim'] as String;
-      final newUsername = result['username'] as String;
-      final newImageFile = result['imageFile'] as File?;
-      String? finalImageUrl = _profileImageUrl;
-
-      if (newImageFile != null) {
-        final uploadedUrl = await _uploadImage(newImageFile);
-        finalImageUrl = uploadedUrl;
-      }
-
-      final error = await _saveProfileToFirestore(newName, newNim, newUsername, finalImageUrl);
-      if (error != null) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Gagal memperbarui profil: $error')),
-          );
-        }
-        return;
-      }
-
+    if (result == true && mounted) {
+      // Give time for file system to sync
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      // Force complete refresh
       setState(() {
-        _name = newName;
-        _nim = newNim;
-        _username = newUsername;
-        _profileImageUrl = finalImageUrl;
+        _headerKey++; // This forces ProfileHeader to rebuild completely
       });
-      await _saveProfileLocally(newName, newNim, newUsername, finalImageUrl);
+      
+      await _loadProfileData();
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Profil berhasil diperbarui'),
+          duration: Duration(seconds: 2),
+        ),
+      );
     }
+  }
+
+  @override
+  void dispose() {
+    _profileUpdateSubscription?.cancel();
+    super.dispose();
   }
 
   @override
@@ -223,39 +178,75 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         child: SafeArea(
           top: false,
-          child: Column(
-            children: [
-              ProfileHeader(
-                name: _name,
-                nim: _nim,
-                profileImageUrl: _profileImageUrl,
-                onEditPressed: _navigateToEditProfile, username: null,
-              ),
-              Text(
-                '@$_username',
-                style: const TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: primaryColor,
-                ),
-              ),
-              const SizedBox(height: 20),
-              _buildStatsRow(),
-              const SizedBox(height: 20),
-              ProfileTabs(
-                selectedTab: _selectedTab,
-                onTabSelected: (index) {
-                  setState(() {
-                    _selectedTab = index;
-                  });
-                },
-              ),
-              const SizedBox(height: 10),
-              Expanded(
-                child: _buildTabContent(),
-              ),
-            ],
+          child: StreamBuilder<DocumentSnapshot>(
+            stream: FirebaseAuth.instance.currentUser?.uid != null
+                ? _firestoreService.streamUserData(FirebaseAuth.instance.currentUser!.uid)
+                : null,
+            builder: (context, snapshot) {
+              String displayName = _name;
+              String displayNim = _nim;
+              String displayUsername = _username;
+              String? displayImageUrl = _profileImageUrl;
+
+              if (snapshot.hasData && snapshot.data!.exists) {
+                final userData = snapshot.data!.data() as Map<String, dynamic>;
+                displayName = userData['namaLengkap'] ?? _name;
+                displayNim = userData['nim'] ?? _nim;
+                displayUsername = userData['username'] ?? _username;
+                displayImageUrl = userData['profileImageUrl'] ?? _profileImageUrl;
+                
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted && 
+                      (displayName != _name || displayNim != _nim || 
+                       displayUsername != _username || displayImageUrl != _profileImageUrl)) {
+                    setState(() {
+                      _name = displayName;
+                      _nim = displayNim;
+                      _username = displayUsername;
+                      _profileImageUrl = displayImageUrl;
+                    });
+                  }
+                });
+              }
+
+              return Column(
+                children: [
+                  ProfileHeader(
+                    key: ValueKey('profile_header_$_headerKey'), // Force rebuild with key
+                    name: displayName,
+                    nim: displayNim,
+                    profileImageUrl: displayImageUrl,
+                    onEditPressed: _navigateToEditProfile,
+                    userId: FirebaseAuth.instance.currentUser?.uid,
+                    username: null,
+                  ),
+                  Text(
+                    '@$displayUsername',
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: primaryColor,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  _buildStatsRow(),
+                  const SizedBox(height: 20),
+                  ProfileTabs(
+                    selectedTab: _selectedTab,
+                    onTabSelected: (index) {
+                      setState(() {
+                        _selectedTab = index;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  Expanded(
+                    child: _buildTabContent(),
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -269,8 +260,10 @@ class _ProfilePageState extends State<ProfilePage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        _buildStatItem("Followers", _firestoreService.getFollowersCount(userId)),
-        _buildStatItem("Following", _firestoreService.getFollowingCount(userId)),
+        _buildStatItem(
+            "Followers", _firestoreService.getFollowersCount(userId)),
+        _buildStatItem(
+            "Following", _firestoreService.getFollowingCount(userId)),
       ],
     );
   }
@@ -317,4 +310,3 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 }
-

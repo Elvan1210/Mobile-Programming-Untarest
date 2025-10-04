@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:untarest_app/screens/auth/login_page.dart';
-import 'package:untarest_app/screens/auth/faculty_selection_page.dart';
 import 'package:untarest_app/services/firestore_service.dart';
 import 'package:untarest_app/utils/constants.dart';
+import 'package:untarest_app/screens/auth/initial_faculty_selection_page.dart';
 import 'login_signup_toggle.dart';
 
 class SignupPage extends StatefulWidget {
@@ -39,6 +39,23 @@ class _SignupPageState extends State<SignupPage> {
         return FadeTransition(opacity: animation, child: child);
       },
     ));
+  }
+
+  void _navigateToFacultySelection() {
+    final username = _usernameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => InitialFacultySelectionPage(
+          username: username,
+          email: email,
+          password: password,
+        ),
+      ),
+    );
   }
 
   void _validateAndNavigate() async {
@@ -78,17 +95,9 @@ class _SignupPageState extends State<SignupPage> {
       return;
     }
     
-    // PERHATIAN: Pastikan FacultySelectionPage bisa menerima 'username'
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => FacultySelectionPage(
-          username: username, // Kirim username
-          email: email,
-          password: password,
-        ),
-      ),
-    );
+    // Navigate to faculty selection page
+    if (!mounted) return;
+    _navigateToFacultySelection();
   }
 
   @override
@@ -105,7 +114,7 @@ class _SignupPageState extends State<SignupPage> {
             ),
           ),
           Container(
-            color: Colors.black.withOpacity(0.5),
+            color: Colors.black.withValues(alpha: 0.5),
           ),
           SafeArea(
             child: Center(

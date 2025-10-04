@@ -1,7 +1,269 @@
 {
   "status": "ok",
-  "totalResults": 11822,
+  "totalResults": 15850,
   "articles": [
+    {
+      "source": {
+        "id": "global-trending",
+        "name": "Global Entertainment"
+      },
+      "author": "K-Pop News",
+      "title": "BLACKPINK's Lisa Announces Solo World Tour 2025",
+      "description": "BLACKPINK's Lisa is set to embark on her first solo world tour, 'LALISA LIVE', visiting 30 cities across Asia, Europe, and North America. The tour promises spectacular performances and exclusive new tracks.",
+      "url": "https://www.rollingstone.com/wp-content/uploads/2024/07/lisa-to-perform-solo-gc.jpg",
+      "urlToImage": "https://www.rollingstone.com/wp-content/uploads/2024/07/lisa-to-perform-solo-gc.jpg",
+      "publishedAt": "2025-01-15T09:30:00Z",
+      "content": "BLACKPINK's Lisa has officially announced her highly anticipated solo world tour...",
+      "region": "Global",
+      "isTrending": true
+    },
+    {
+      "source": {
+        "id": "us-politics",
+        "name": "Political Times"
+      },
+      "author": "Political Reporter",
+      "title": "Ariana Grande jokingly shouts out ‘Botox and Juvederm’ while accepting award",
+      "description": "Ariana Grande jokingly shouts out ‘Botox and Juvederm’ while accepting award",
+      "url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSOv3R3hXU87tqaxRKUQn2o5iTjXZq0yABKyg&s",
+      "urlToImage": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSOv3R3hXU87tqaxRKUQn2o5iTjXZq0yABKyg&s",
+      "publishedAt": "2025-01-14T14:20:00Z",
+      "content": "Political analysts reveal Trump's comprehensive strategy for the 2025 election cycle...",
+      "region": "United States",
+      "isTrending": true
+    },
+    {
+      "source": {
+        "id": "anime-news",
+        "name": "Anime Central"
+      },
+      "author": "Anime Reporter",
+      "title": "Attack on Titan Final Movie Breaks Box Office Records",
+      "description": "The final Attack on Titan movie has shattered global box office records, earning over $500 million worldwide in its opening weekend. Fans worldwide celebrate the epic conclusion.",
+      "url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR0ocs002GQfXVfbxBeH_nRmH_c6E7lclKwvQ&s",
+      "urlToImage": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR0ocs002GQfXVfbxBeH_nRmH_c6E7lclKwvQ&s",
+      "publishedAt": "2025-01-13T16:45:00Z",
+      "content": "The highly anticipated Attack on Titan final movie has exceeded all expectations...",
+      "region": "Japan",
+      "isTrending": true
+    },
+    {
+      "source": {
+        "id": "meme-culture",
+        "name": "Meme Daily"
+      },
+      "author": "Meme Expert",
+      "title": "Jennie's Chanel Long Coat Shines at Airport",
+      "description": "Jennie departed for Paris, France, through Incheon International Airport on the morning of the 4th. As a Chanel ambassador, she traveled to attend the ‘Chanel 2026 Spring-Summer Ready-to-Wear Collection Show’ scheduled for the 7th (Korean time).",
+      "url": "https://www.chosun.com/resizer/v2/JWB2WEPPMR4MDRSW6MT6YZTRRA.jpg?auth=1e65be616b92ad0bd01e44c77250915c40e3fe0a82a4fc91e5900db01feec079&width=616",
+      "urlToImage": "https://www.chosun.com/resizer/v2/JWB2WEPPMR4MDRSW6MT6YZTRRA.jpg?auth=1e65be616b92ad0bd01e44c77250915c40e3fe0a82a4fc91e5900db01feec079&width=616",
+      "publishedAt": "2025-01-12T11:30:00Z",
+      "content": "Jennie Kim, Jennie, Blackpink",
+      "region": "South Korea",
+      "isTrending": true
+    },
+    {
+      "source": {
+        "id": "indonesia-politics",
+        "name": "Jakarta Post"
+      },
+      "author": "Political Desk",
+      "title": "Menteri Investasi Bahlil Lahadalia Luncurkan Program Investasi Digital Indonesia 2025",
+      "description": "Menteri Investasi/Kepala BKPM Bahlil Lahadalia mengumumkan program investasi digital yang bertujuan menarik investasi teknologi senilai $50 miliar untuk mendukung transformasi digital Indonesia.",
+      "url": "https://www.thejakartapost.com/indonesia/2025/01/12/investment-minister-bahlil-digital-program",
+      "urlToImage": "https://img.jakpost.net/c/2025/01/12/2025_01_12_168932_1641971234._large.jpg",
+      "publishedAt": "2025-01-12T08:30:00Z",
+      "content": "Menteri Investasi/Kepala BKPM Bahlil Lahadalia hari ini meluncurkan program ambisius untuk menarik investasi digital...",
+      "region": "Indonesia",
+      "isTrending": true
+    },
+    {
+      "source": {
+        "id": "political-memes",
+        "name": "Political Humor Hub"
+      },
+      "author": "Satire Writer",
+      "title": "International Political Memes Dominate Social Media",
+      "description": "From Indonesian political satire to American election memes, political humor is taking over social media platforms worldwide, providing comic relief during tense times.",
+      "url": "https://images3.memedroid.com/images/UPLOADED307/5da2df6b7cf7e.jpeg",
+      "urlToImage": "https://images3.memedroid.com/images/UPLOADED307/5da2df6b7cf7e.jpeg",
+      "publishedAt": "2025-01-11T13:15:00Z",
+      "content": "Political memes have become a universal language for expressing frustration and humor...",
+      "region": "Global",
+      "isTrending": true
+    },
+    {
+      "source": {
+        "id": "gaming-news",
+        "name": "Otome Game Weekly"
+      },
+      "author": "Gaming Journalist",
+      "title": "New Otome Game 'Love and Deepspace' Breaks Pre-order Records",
+      "description": "The upcoming otome game 'Love and Deepspace' featuring supernatural romance and stunning artwork has broken pre-order records with over 2 million pre-orders worldwide.",
+      "url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRlGS9Z91q0w5xQKBx-PR4ta-NTAR8tjE3aQA&s",
+      "urlToImage": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRlGS9Z91q0w5xQKBx-PR4ta-NTAR8tjE3aQA&s",
+      "publishedAt": "2025-01-10T10:00:00Z",
+      "content": "Otome game enthusiasts are thrilled about the upcoming release of Love and Deepspace...",
+      "region": "South Korea",
+      "isTrending": true
+    },
+    {
+      "source": {
+        "id": "rpg-gaming",
+        "name": "RPG Universe"
+      },
+      "author": "RPG Reviewer",
+      "title": "Epic Fantasy RPG 'Dragon's Legacy: The Final Quest' Launches to Critical Acclaim",
+      "description": "The highly anticipated RPG 'Dragon's Legacy: The Final Quest' has launched to universal critical acclaim, featuring 200+ hours of gameplay and revolutionary AI-driven storytelling.",
+      "url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS5-EkUQBsaq1QvGZ600gz0DCx7kBGDr16tIw&s",
+      "urlToImage": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS5-EkUQBsaq1QvGZ600gz0DCx7kBGDr16tIw&s",
+      "publishedAt": "2025-01-09T15:30:00Z",
+      "content": "RPG fans around the world are celebrating the launch of what many consider...",
+      "region": "Global",
+      "isTrending": true
+    },
+    {
+      "source": {
+        "id": "celebrity-gossip",
+        "name": "Celebrity Buzz"
+      },
+      "author": "Entertainment Reporter",
+      "title": "Taylor Swift and Travis Kelce's Secret Wedding Plans Revealed",
+      "description": "Exclusive details emerge about Taylor Swift and Travis Kelce's upcoming secret wedding ceremony, including the guest list and exotic location chosen for their special day.",
+      "url": "https://people.com/thmb/NbC-CSBNMA4RMzFPBPhw6qbzXtM=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc():focal(793x287:795x289)/taylor-swift-travis-kelce-082625-52742cb9f9854e0099b87b2d4216ccc1.jpg",
+      "urlToImage": "https://people.com/thmb/NbC-CSBNMA4RMzFPBPhw6qbzXtM=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc():focal(793x287:795x289)/taylor-swift-travis-kelce-082625-52742cb9f9854e0099b87b2d4216ccc1.jpg",
+      "publishedAt": "2025-01-08T12:45:00Z",
+      "content": "Sources close to the couple reveal intimate details about the upcoming ceremony...",
+      "region": "United States",
+      "isTrending": true
+    },
+    {
+      "source": {
+        "id": "global-trending",
+        "name": "Friends unable to understand kpop"
+      },
+      "author": "Trend Analyst",
+      "title": "Non Kpop and Kpop friend conversations",
+      "description": "A comprehensive look at what's trending globally right now, from K-Pop comebacks to viral memes, political satire, and gaming releases that are capturing worldwide attention.",
+      "url": "https://pm1.aminoapps.com/6290/b7f519f67fef5370998d5a187e418ac7f7b77317_hq.jpg",
+      "urlToImage": "https://pm1.aminoapps.com/6290/b7f519f67fef5370998d5a187e418ac7f7b77317_hq.jpg",
+      "publishedAt": "2025-01-07T09:00:00Z",
+      "content": "The digital landscape is constantly evolving with new trends emerging daily...",
+      "region": "Global",
+      "isTrending": true,
+      "isMeme": true
+    },
+    {
+      "source": {
+        "id": "anime-culture",
+        "name": "Anime World"
+      },
+      "author": "Anime Critic",
+      "title": "Studio Ghibli Announces New Film Project for 2025",
+      "description": "Studio Ghibli surprises fans with the announcement of a new animated film project, marking their return to feature-length productions after a brief hiatus.",
+      "url": "https://imgproxy.domestika.org/unsafe/w:1200/rs:fill/plain/src://blog-post-open-graph-covers/000/009/506/9506-original.png?1638349732",
+      "urlToImage": "https://imgproxy.domestika.org/unsafe/w:1200/rs:fill/plain/src://blog-post-open-graph-covers/000/009/506/9506-original.png?1638349732",
+      "publishedAt": "2025-01-06T14:20:00Z",
+      "content": "Animation enthusiasts worldwide are celebrating the news of Studio Ghibli's return...",
+      "region": "Japan",
+      "isTrending": true
+    },
+    {
+      "source": { "id": "kpop-world", "name": "K-Pop World" },
+      "author": "Idol Watch",
+      "title": "BLACKPINK Confirms 2025 Group Comeback With EDM Collab",
+      "description": "YG confirms a global comeback with an international DJ collaboration and stadium tour teasers.",
+      "url": "https://cms.disway.id/uploads/ef6c1f47f696b85a6f2ba39caaca8c2e.jpg",
+      "urlToImage": "https://cms.disway.id/uploads/ef6c1f47f696b85a6f2ba39caaca8c2e.jpg",
+      "publishedAt": "2025-01-05T10:00:00Z",
+      "content": "BLACKPINK teases a new sound with a top EDM producer and a massive stadium run...",
+      "region": "Global",
+      "isTrending": true
+    },
+    {
+      "source": { "id": "us-politics", "name": "Capitol Insider" },
+      "author": "Policy Desk",
+      "title": "Donald Trump Hints At Tech-First Campaign Trail",
+      "description": "A renewed digital strategy featuring short-form videos and AI-driven outreach aims to boost engagement.",
+      "url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTkXjzx3lCXX238RCOe4F5DVNHKshH2nljTyQ&s",
+      "urlToImage": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTkXjzx3lCXX238RCOe4F5DVNHKshH2nljTyQ&s",
+      "publishedAt": "2025-01-05T09:00:00Z",
+      "content": "Campaign aides preview a revamped online presence with targeted voter micro-messaging...",
+      "region": "United States",
+      "isTrending": true
+    },
+    {
+      "source": { "id": "anime-news", "name": "Anime Central" },
+      "author": "Otaku Daily",
+      "title": "Jujutsu Kaisen Season 3 Teaser Drops Unexpected Villain Arc",
+      "description": "A surprise arc reveal sends shockwaves across the fandom with darker storytelling cues.",
+      "url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ3xk85moEYohSnAt9B6NBv2SQS-noj5JseeQ&s",
+      "urlToImage": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ3xk85moEYohSnAt9B6NBv2SQS-noj5JseeQ&s",
+      "publishedAt": "2025-01-04T18:20:00Z",
+      "content": "MAPPA hints at a tonal shift and expanded worldbuilding for Season 3...",
+      "region": "Japan",
+      "isTrending": true
+    },
+    {
+      "source": { "id": "jisoo", "name": "Jisoo" },
+      "author": "Netizen Radar",
+      "title": "BLACKPINK Jisoo's New Instagram Post Goes Viral",
+      "description": "Jisoo's latest post featuring her elegant style has gained millions of likes and comments from fans worldwide.",
+      "url": "https://example.com/jisoo-viral-post",
+      "urlToImage": "assets/local_meme_photos/Jisoo1.jpeg",
+      "publishedAt": "2025-01-04T12:00:00Z",
+      "content": "BLACKPINK's Jisoo continues to capture hearts with her stunning visuals and elegant fashion choices.",
+      "region": "Global",
+      "isTrending": true
+    },
+    {
+      "source": { "id": "gaming-news", "name": "RPG Universe" },
+      "author": "Game Scout",
+      "title": "Open-World RPG ‘Eclipse of Realms’ Reveals Photo Mode And Co-Op Raids",
+      "description": "A new fantasy RPG showcases cinematic photo mode, deep crafting, and region-based servers.",
+      "url": "https://example.com/eclipse-of-realms-reveal",
+      "urlToImage": "https://images.unsplash.com/photo-1511512578047-dfb367046420?w=800",
+      "publishedAt": "2025-01-03T16:45:00Z",
+      "content": "Developers promise cross-play and weekly global events...",
+      "region": "Europe",
+      "isTrending": true
+    },
+    {
+      "source": { "id": "otome-weekly", "name": "Otome Weekly" },
+      "author": "Romance Dev Watch",
+      "title": "Otome ‘Cafe of Starlight’ Beta Surges Past 1M Sign-Ups",
+      "description": "A cozy romance sim with café management blends wholesome vibes with branching storylines.",
+      "url": "https://example.com/otome-cafe-of-starlight",
+      "urlToImage": "https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?w=800",
+      "publishedAt": "2025-01-03T10:10:00Z",
+      "content": "Fans praise character art, voice acting, and wholesome pacing...",
+      "region": "South Korea",
+      "isTrending": true
+    },
+    {
+      "source": { "id": "celebrity-gossip", "name": "Celebrity Buzz" },
+      "author": "Showbiz Insider",
+      "title": "Global Celebrity Couple Sparks Engagement Rumors After Bali Trip",
+      "description": "Fans spot matching rings and cryptic captions during an island getaway.",
+      "url": "https://example.com/celeb-engagement-bali",
+      "urlToImage": "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=800",
+      "publishedAt": "2025-01-02T19:00:00Z",
+      "content": "Paparazzi photos show intimate moments and ring glints as speculation grows...",
+      "region": "Indonesia",
+      "isTrending": true
+    },
+    {
+      "source": { "id": "meme-culture", "name": "Meme Daily" },
+      "author": "LOL Metrics",
+      "title": "Rose APT Won the Best Song",
+      "description": "Rose won the best song at MTV VMA's.",
+      "url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQL1pmiA3l_PptE9jG5sFhGWfA3J9oiW7wZ7Q&s",
+      "urlToImage": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQL1pmiA3l_PptE9jG5sFhGWfA3J9oiW7wZ7Q&s",
+      "publishedAt": "2025-01-02T12:30:00Z",
+      "content": "Rose, Blackpink, ",
+      "region": "Global",
+      "isTrending": true
+    },
     {
       "source": {
         "id": null,
