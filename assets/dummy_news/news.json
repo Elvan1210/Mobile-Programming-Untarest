@@ -2142,6 +2142,118 @@
       "urlToImage": "assets/local_meme_photos/Lisa ultralight.jpeg",
       "publishedAt": "2025-10-01T10:44:21Z",
       "content": "Lisa, Blackpink, lalalisa"
+    },
+    {
+      "source": {
+        "id": null,
+        "name": ""
+      },
+      "author": "Deddy",
+      "title": "DaddyCorbuzier",
+      "description": "",
+      "region": "Indonesia",
+      "isTrending": true,
+      "isMeme": false,
+      "url": "assets/local_meme_photos/deddy1.jpg",
+      "urlToImage": "assets/local_meme_photos/deddy1.jpg",
+      "publishedAt": "2025-10-05T10:44:21Z",
+      "content": "Daddy, Deddy, Botak"
+    },
+    {
+      "source": {
+        "id": null,
+        "name": ""
+      },
+      "author": "Deddy",
+      "title": "DaddyCorbuzier",
+      "description": "",
+      "region": "Indonesia",
+      "isTrending": true,
+      "isMeme": false,
+      "url": "assets/local_meme_photos/deddy2.jpg",
+      "urlToImage": "assets/local_meme_photos/deddy2.jpg",
+      "publishedAt": "2025-10-05T10:44:21Z",
+      "content": "Daddy, Deddy, Botak"
+    },
+    {
+      "source": {
+        "id": null,
+        "name": ""
+      },
+      "author": "Adit",
+      "title": "Adit Sopo Jarwo",
+      "description": "",
+      "region": "Indonesia",
+      "isTrending": false,
+      "isMeme": true,
+      "url": "assets/local_meme_photos/adit1.jpg",
+      "urlToImage": "assets/local_meme_photos/adit1.jpg",
+      "publishedAt": "2025-10-05T10:44:21Z",
+      "content": "adit, nopal, dit tolongin dit"
+    },
+    {
+      "source": {
+        "id": null,
+        "name": ""
+      },
+      "author": "Adit",
+      "title": "Adit Sopo Jarwo",
+      "description": "",
+      "region": "Indonesia",
+      "isTrending": false,
+      "isMeme": true,
+      "url": "assets/local_meme_photos/adit2.jpg",
+      "urlToImage": "assets/local_meme_photos/adit2.jpg",
+      "publishedAt": "2025-10-05T10:44:21Z",
+      "content": "adit, nopal, dit tolongin dit"
+    },
+    {
+      "source": {
+        "id": null,
+        "name": ""
+      },
+      "author": "Adit",
+      "title": "Adit Sopo Jarwo",
+      "description": "",
+      "region": "Indonesia",
+      "isTrending": false,
+      "isMeme": true,
+      "url": "assets/local_meme_photos/adit3.jpg",
+      "urlToImage": "assets/local_meme_photos/adit3.jpg",
+      "publishedAt": "2025-10-05T10:44:21Z",
+      "content": "adit, nopal, dit tolongin dit"
+    },
+    {
+      "source": {
+        "id": null,
+        "name": ""
+      },
+      "author": "Agnes",
+      "title": "Agnes Monica",
+      "description": "",
+      "region": "Indonesia",
+      "isTrending": false,
+      "isMeme": true,
+      "url": "assets/local_meme_photos/agnesmo1.jpg",
+      "urlToImage": "assets/local_meme_photos/agnesmo1.jpg",
+      "publishedAt": "2025-10-05T10:44:21Z",
+      "content": "agnesmo, monica, agnes"
+    },
+    {
+      "source": {
+        "id": null,
+        "name": ""
+      },
+      "author": "Agnes",
+      "title": "Agnes Monica",
+      "description": "",
+      "region": "Indonesia",
+      "isTrending": false,
+      "isMeme": true,
+      "url": "assets/local_meme_photos/agnesmo2.jpg",
+      "urlToImage": "assets/local_meme_photos/agnesmo2.jpg",
+      "publishedAt": "2025-10-05T10:44:21Z",
+      "content": "agnesmo, monica, agnes"
     }
   ]
 }
