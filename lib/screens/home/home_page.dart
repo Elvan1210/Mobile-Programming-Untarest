@@ -10,6 +10,9 @@ import 'package:untarest_app/utils/constants.dart';
 import 'package:untarest_app/screens/profile/profile.dart';
 import 'package:untarest_app/utils/search_bar.dart';
 
+// --- TAMBAHKAN IMPORT INI ---
+import 'package:untarest_app/screens/home/create_post_page.dart';
+
 // Helper function to check if a URL is a network URL
 bool isNetworkImage(String url) {
   return url.startsWith('http://') || url.startsWith('https://');
@@ -25,13 +28,12 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
 
-  // Halaman-halaman untuk BottomNavigationBar
+  // --- PERUBAHAN DI SINI ---
+  // Ganti placeholder dengan halaman CreatePostPage yang baru
   late final List<Widget> _widgetOptions = <Widget>[
-    const _HomeContent(), // Menggunakan const karena _HomeContent punya key sendiri
+    const _HomeContent(),
     const SearchFeatures(),
-    const Center(
-        child: Text('Halaman Create/Upload Placeholder',
-            style: TextStyle(color: Colors.black))),
+    const CreatePostPage(), // <-- HALAMAN PLACEHOLDER SUDAH DIGANTI
     const ProfilePage(),
   ];
 
@@ -41,7 +43,6 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  // Fungsi untuk pindah ke halaman search dari search bar
   void _goToSearch() {
     setState(() {
       _selectedIndex = 1;
@@ -107,21 +108,20 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
+// (Sisa kode di bawah ini tidak ada perubahan)
 class _HomeContent extends StatefulWidget {
-  const _HomeContent({super.key});
+  const _HomeContent();
 
   @override
   State<_HomeContent> createState() => _HomeContentState();
 }
 
 class _HomeContentState extends State<_HomeContent> {
-  // --- Variabel State Gabungan dari Kedua Versi ---
   final TextEditingController _searchController = TextEditingController();
   String selectedCountry = "Indonesia";
   List<NewsArticle> allNews = [];
   bool _isLoading = true;
   final FirestoreService _firestoreService = FirestoreService();
-  // --------------------------------------------------
 
   @override
   void initState() {
@@ -209,7 +209,6 @@ class _HomeContentState extends State<_HomeContent> {
         ),
         child: CustomScrollView(
           slivers: [
-            // --- Bagian Atas: Logo, Search Bar, dan Trending Vibes ---
             SliverToBoxAdapter(
               child: Column(
                 children: [
@@ -241,7 +240,6 @@ class _HomeContentState extends State<_HomeContent> {
                 ],
               ),
             ),
-            // --- Bagian Bawah: Grid Konten ---
             SliverToBoxAdapter(
               child: Container(
                 padding:
@@ -338,7 +336,7 @@ class _HomeContentState extends State<_HomeContent> {
                                 ),
                               );
                             },
-                            headers: {
+                            headers: const {
                               'User-Agent':
                                   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                             },
@@ -355,7 +353,6 @@ class _HomeContentState extends State<_HomeContent> {
                           ))
                     : buildNoImagePlaceholder(article),
               ),
-              // Tombol Save/Bookmark
               Positioned(
                 top: 8,
                 right: 8,
@@ -513,14 +510,8 @@ class _TrendingVibesSection extends StatelessWidget {
               icon: const Icon(Icons.arrow_drop_down, color: Colors.black87),
               onPressed: () {
                 _showCountryPicker(context, [
-                  'Indonesia',
-                  'USA',
-                  'Japan',
-                  'South Korea',
-                  'China',
-                  'France',
-                  'UK',
-                  'Global',
+                  'Indonesia', 'USA', 'Japan', 'South Korea', 'China',
+                  'France', 'UK', 'Global',
                 ], (country) {
                   onCountryChanged(country);
                 });
@@ -583,3 +574,4 @@ void _showCountryPicker(
     },
   );
 }
+
