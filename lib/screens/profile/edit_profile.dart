@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/firestore_service.dart';
 import '../../widgets/simple_image_picker_widget.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class EditProfilePage extends StatefulWidget {
   final String initialName;
@@ -36,8 +37,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _nimController = TextEditingController(text: widget.initialNim);
     _usernameController = TextEditingController(text: widget.initialUsername);
   }
-
-
 
   void _saveProfile() async {
     if (_isSaving) return;
@@ -87,10 +86,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
       }
 
       if (mounted) {
-        
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Profil berhasil diperbarui')),
         );
+        // Return true to signal successful update
         Navigator.pop(context, true);
       }
     } catch (e) {
@@ -110,7 +109,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _usernameController.dispose();
     super.dispose();
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -139,9 +137,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   SimpleImagePickerWidget(
                     userId: widget.userId,
                     radius: 60,
-                    onImageChanged: () {
-                      // Refresh profile header if needed
-                      setState(() {});
+                    onImageChanged: (imagePath) {
+                      debugPrint('Image changed: $imagePath');
                     },
                   ),
                   const SizedBox(height: 10),

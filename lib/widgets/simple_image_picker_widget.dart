@@ -1,13 +1,13 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../services/image_service.dart';
-import '../services/storage_service.dart';
 import '../utils/snackbar_helper.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SimpleImagePickerWidget extends StatefulWidget {
   final String? userId;
   final double radius;
-  final VoidCallback? onImageChanged;
+  final Function(String?)? onImageChanged;
 
   const SimpleImagePickerWidget({
     super.key,
@@ -22,9 +22,9 @@ class SimpleImagePickerWidget extends StatefulWidget {
 
 class _SimpleImagePickerWidgetState extends State<SimpleImagePickerWidget> {
   final ImageService _imageService = ImageService();
-  final StorageService _storageService = StorageService();
 
   File? _imageFile;
+  int _imageKey = 0;
 
   @override
   void initState() {
@@ -32,26 +32,59 @@ class _SimpleImagePickerWidgetState extends State<SimpleImagePickerWidget> {
     _loadImage();
   }
 
+  @override
+  void didUpdateWidget(SimpleImagePickerWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.userId != widget.userId) {
+      _loadImage();
+    }
+  }
+
   Future<void> _loadImage() async {
-    final file = await _storageService.loadImage();
-    if (mounted) {
-      setState(() {
-        _imageFile = file;
-      });
+    if (widget.userId == null) return;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final imagePath = prefs.getString('profile_image_${widget.userId}');
+      
+      if (imagePath != null && File(imagePath).existsSync()) {
+        if (mounted) {
+          setState(() {
+            _imageFile = File(imagePath);
+            _imageKey++;
+          });
+          debugPrint('✅ Loaded image from: $imagePath');
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Error loading image: $e');
     }
   }
 
   Future<void> _pickImage(bool fromCamera) async {
+    if (widget.userId == null) {
+      if (mounted) {
+        SnackbarHelper.showError(context, "User ID tidak ditemukan");
+      }
+      return;
+    }
+
     try {
       final file = fromCamera
           ? await _imageService.pickFromCamera()
           : await _imageService.pickFromGallery();
 
       if (file != null) {
+        // Save image path with userId
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('profile_image_${widget.userId}', file.path);
+        
         setState(() {
           _imageFile = file;
+          _imageKey++;
         });
-        await _storageService.saveImagePath(file.path);
+
+        debugPrint('📸 New image saved: ${file.path} for user: ${widget.userId}');
 
         if (mounted) {
           SnackbarHelper.showSuccess(
@@ -62,7 +95,7 @@ class _SimpleImagePickerWidgetState extends State<SimpleImagePickerWidget> {
           );
           
           // Notify parent widget about image change
-          widget.onImageChanged?.call();
+          widget.onImageChanged?.call(file.path);
         }
       } else {
         if (mounted) {
@@ -113,6 +146,7 @@ class _SimpleImagePickerWidgetState extends State<SimpleImagePickerWidget> {
       child: Stack(
         children: [
           CircleAvatar(
+            key: ValueKey('image_picker_$_imageKey'),
             radius: widget.radius,
             backgroundColor: Colors.grey[300],
             backgroundImage: _imageFile != null ? FileImage(_imageFile!) : null,

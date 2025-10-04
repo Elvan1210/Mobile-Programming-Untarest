@@ -28,7 +28,7 @@ class ProfileHeader extends StatefulWidget {
 
 class _ProfileHeaderState extends State<ProfileHeader> {
   String? _currentLocalPath;
-  int _imageKey = 0;
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -45,7 +45,9 @@ class _ProfileHeaderState extends State<ProfileHeader> {
   }
 
   Future<void> _loadLocalImagePath() async {
-    if (widget.userId == null) return;
+    if (widget.userId == null || _isLoading) return;
+    
+    setState(() => _isLoading = true);
     
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -54,48 +56,43 @@ class _ProfileHeaderState extends State<ProfileHeader> {
       if (mounted && localPath != _currentLocalPath) {
         setState(() {
           _currentLocalPath = localPath;
-          _imageKey++; // Force image widget rebuild
         });
-        debugPrint('Profile image path loaded: $localPath');
+        debugPrint('✅ Profile image loaded: $localPath');
       }
     } catch (e) {
-      debugPrint('Error loading local image path: $e');
+      debugPrint('❌ Error loading image: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
-  }
-
-  void _refreshImage() {
-    debugPrint('🔄 REFRESHING profile image for user: ${widget.userId}');
-    _loadLocalImagePath();
-    // Force a complete widget rebuild
-    setState(() {
-      _imageKey = DateTime.now().millisecondsSinceEpoch;
-    });
-    debugPrint('🔄 FORCED setState with new imageKey: $_imageKey');
   }
 
   Widget _buildProfileImageWidget() {
-    // Show local image if available, otherwise show default icon
-    if (_currentLocalPath != null && File(_currentLocalPath!).existsSync()) {
-      return ClipOval(
-        key: ValueKey('profile_image_${_imageKey}_$_currentLocalPath'),
-        child: Image.file(
-          File(_currentLocalPath!),
-          fit: BoxFit.cover,
-          width: 112,
-          height: 112,
-          errorBuilder: (context, error, stackTrace) {
-            debugPrint('Error loading profile image: $error');
-            return const Icon(
-              Icons.person,
-              size: 60,
-              color: Colors.grey,
-            );
-          },
-        ),
-      );
+    // Check if file exists and is valid
+    if (_currentLocalPath != null) {
+      final file = File(_currentLocalPath!);
+      if (file.existsSync()) {
+        return ClipOval(
+          child: Image.file(
+            file,
+            fit: BoxFit.cover,
+            width: 112,
+            height: 112,
+            cacheWidth: 112, // Optimize memory
+            errorBuilder: (context, error, stackTrace) {
+              debugPrint('Error displaying image: $error');
+              return _buildDefaultIcon();
+            },
+          ),
+        );
+      }
     }
     
-    // Default icon when no image is available
+    return _buildDefaultIcon();
+  }
+
+  Widget _buildDefaultIcon() {
     return const Icon(
       Icons.person,
       size: 60,
@@ -105,81 +102,66 @@ class _ProfileHeaderState extends State<ProfileHeader> {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<String?>(
-      valueListenable: profileImageNotifier,
-      builder: (context, notifierValue, child) {
-        // Refresh image whenever the notifier value changes
-        if (notifierValue != null) {
-          debugPrint('ProfileHeader received update notification: $notifierValue');
-          // Trigger a refresh when we get a notification
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _refreshImage();
-          });
-        }
-        
-        return Padding(
-          padding: const EdgeInsets.only(
-              top: 20.0, bottom: 20.0), // Changed from 60 to 20
-          child: Column(
+    return Padding(
+      padding: const EdgeInsets.only(top: 20.0, bottom: 20.0),
+      child: Column(
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
             children: [
-              Stack(
-                clipBehavior: Clip.none,
-                alignment: Alignment.center,
-                children: [
-                  CircleAvatar(
-                    radius: 60,
-                    backgroundColor: Colors.white,
-                    child: CircleAvatar(
-                      radius: 56,
-                      child: _buildProfileImageWidget(),
-                    ),
-                  ),
-                  // Tombol edit hanya akan muncul jika onEditPressed TIDAK null
-                  if (widget.onEditPressed != null)
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: GestureDetector(
-                        onTap: widget.onEditPressed,
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: const BoxDecoration(
-                            color: Color.fromARGB(255, 118, 0, 0),
-                            shape: BoxShape.circle,
-                            border: Border.fromBorderSide(
-                              BorderSide(color: Colors.white, width: 2),
-                            ),
-                          ),
-                          child:
-                              const Icon(Icons.edit, color: Colors.white, size: 20),
+              CircleAvatar(
+                radius: 60,
+                backgroundColor: Colors.white,
+                child: CircleAvatar(
+                  radius: 56,
+                  child: _buildProfileImageWidget(),
+                ),
+              ),
+              if (widget.onEditPressed != null)
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: GestureDetector(
+                    onTap: widget.onEditPressed,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: const BoxDecoration(
+                        color: Color.fromARGB(255, 118, 0, 0),
+                        shape: BoxShape.circle,
+                        border: Border.fromBorderSide(
+                          BorderSide(color: Colors.white, width: 2),
                         ),
                       ),
+                      child: const Icon(Icons.edit, color: Colors.white, size: 20),
                     ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                widget.name,
-                style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Poppins',
-                    color: Colors.black, // Warna diubah ke hitam
-                    shadows: [Shadow(blurRadius: 1, color: Colors.white54)]),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                widget.nim,
-                style: const TextStyle(
-                    fontSize: 16,
-                    fontFamily: 'Poppins',
-                    color: Colors.black54, // Warna diubah ke abu-abu gelap
-                    shadows: [Shadow(blurRadius: 1, color: Colors.white54)]),
-              ),
+                  ),
+                ),
             ],
           ),
-        );
-      },
+          const SizedBox(height: 12),
+          Text(
+            widget.name,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Poppins',
+              color: Colors.black,
+              shadows: [Shadow(blurRadius: 1, color: Colors.white54)],
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            widget.nim,
+            style: const TextStyle(
+              fontSize: 16,
+              fontFamily: 'Poppins',
+              color: Colors.black54,
+              shadows: [Shadow(blurRadius: 1, color: Colors.white54)],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

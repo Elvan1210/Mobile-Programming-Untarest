@@ -13,7 +13,6 @@ import 'package:untarest_app/widgets/liked_posts_grid.dart';
 import 'package:untarest_app/widgets/saved_posts_grid.dart';
 import 'package:untarest_app/widgets/user_posts_grid.dart';
 import 'package:untarest_app/utils/constants.dart';
-import '../../profile_image_notifier.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -30,32 +29,28 @@ class _ProfilePageState extends State<ProfilePage> {
   String _nim = 'NIM';
   String _username = 'username';
   String? _profileImageUrl;
-  String? _localImagePath;
   int _selectedTab = 0;
   StreamSubscription<String>? _profileUpdateSubscription;
+  int _headerKey = 0; // Key to force ProfileHeader rebuild
 
   @override
   void initState() {
     super.initState();
     _loadProfileData();
-    _loadLocalImage();
     
     // Listen for profile updates from anywhere in the app
     _profileUpdateSubscription = FirestoreService.profileUpdateStream.listen((userId) {
       final currentUserId = FirebaseAuth.instance.currentUser?.uid;
       if (currentUserId == userId) {
-        _loadProfileData(); // Refresh profile data when updated
+        _loadProfileData();
       }
     });
-    
-    // Listen for profile image changes
-    profileImageNotifier.addListener(_onImageChanged);
   }
 
   Future<void> _logout() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.clear(); // Menghapus semua data SharedPreferences saat logout
+      await prefs.clear();
       await _authService.signOut();
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
@@ -76,7 +71,7 @@ class _ProfilePageState extends State<ProfilePage> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    // Load from local storage first for immediate display
+    // Load from local storage first
     final prefs = await SharedPreferences.getInstance();
     if (mounted) {
       setState(() {
@@ -87,7 +82,7 @@ class _ProfilePageState extends State<ProfilePage> {
       });
     }
 
-    // Then load fresh data from Firestore and sync
+    // Then load fresh data from Firestore
     try {
       final profileData = await _firestoreService.getCompleteUserProfile(user.uid);
       if (profileData != null && mounted) {
@@ -103,7 +98,6 @@ class _ProfilePageState extends State<ProfilePage> {
           _profileImageUrl = loadedImageUrl;
         });
         
-        // Sync to local storage
         await _firestoreService.syncProfileLocally(user.uid);
       }
     } catch (e) {
@@ -128,68 +122,34 @@ class _ProfilePageState extends State<ProfilePage> {
           initialNim: _nim,
           initialUsername: _username,
           initialImageUrl: _profileImageUrl,
-          userId: user.uid, // Fix: Pass the correct userId
+          userId: user.uid,
         ),
       ),
     );
 
-    // The new EditProfilePage handles everything through the centralized method
-    // We just need to check if the result indicates success
-    if (result == true) {
-      // Profile was successfully updated
-      // Force refresh profile data immediately
+    if (result == true && mounted) {
+      // Give time for file system to sync
+      await Future.delayed(const Duration(milliseconds: 500));
+      
+      // Force complete refresh
+      setState(() {
+        _headerKey++; // This forces ProfileHeader to rebuild completely
+      });
+      
       await _loadProfileData();
       
-      // Trigger profile image notifier to force immediate header refresh
-      final prefs = await SharedPreferences.getInstance();
-      final localImagePath = prefs.getString('profile_image_${user.uid}');
-      if (localImagePath != null) {
-        // Import ProfileImageNotifier first, then add this line:
-        // ProfileImageNotifier.updateImagePath(user.uid, localImagePath);
-        debugPrint('Would trigger ProfileImageNotifier here: $localImagePath');
-      }
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Profil berhasil diperbarui dan disinkronkan'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Profil berhasil diperbarui'),
+          duration: Duration(seconds: 2),
+        ),
+      );
     }
-  }
-
-  // Load local image from SharedPreferences
-  Future<void> _loadLocalImage() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final localPath = prefs.getString('profile_image_${user.uid}');
-      
-      if (mounted && localPath != _localImagePath) {
-        setState(() {
-          _localImagePath = localPath;
-        });
-        debugPrint('Profile page loaded local image: $localPath');
-      }
-    } catch (e) {
-      debugPrint('Error loading local image in profile page: $e');
-    }
-  }
-
-  // Called when profileImageNotifier changes
-  void _onImageChanged() {
-    debugPrint('Profile page received image change notification');
-    _loadLocalImage();
   }
 
   @override
   void dispose() {
     _profileUpdateSubscription?.cancel();
-    profileImageNotifier.removeListener(_onImageChanged);
     super.dispose();
   }
 
@@ -223,7 +183,6 @@ class _ProfilePageState extends State<ProfilePage> {
                 ? _firestoreService.streamUserData(FirebaseAuth.instance.currentUser!.uid)
                 : null,
             builder: (context, snapshot) {
-              // Use real-time data if available, fallback to local state
               String displayName = _name;
               String displayNim = _nim;
               String displayUsername = _username;
@@ -236,7 +195,6 @@ class _ProfilePageState extends State<ProfilePage> {
                 displayUsername = userData['username'] ?? _username;
                 displayImageUrl = userData['profileImageUrl'] ?? _profileImageUrl;
                 
-                // Update local state to match Firestore data
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   if (mounted && 
                       (displayName != _name || displayNim != _nim || 
@@ -254,6 +212,7 @@ class _ProfilePageState extends State<ProfilePage> {
               return Column(
                 children: [
                   ProfileHeader(
+                    key: ValueKey('profile_header_$_headerKey'), // Force rebuild with key
                     name: displayName,
                     nim: displayNim,
                     profileImageUrl: displayImageUrl,

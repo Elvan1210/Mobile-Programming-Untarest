@@ -6,6 +6,7 @@ import 'package:untarest_app/services/firestore_service.dart';
 import 'package:untarest_app/models/search_news.dart';
 import 'package:untarest_app/widgets/news_feed_grid.dart';
 import 'package:untarest_app/screens/profile/user_profile_page.dart';
+import 'package:untarest_app/screens/home/user_post_detail_page.dart'; // ✅ IMPORT INI
 import 'package:untarest_app/utils/constants.dart';
 
 enum SearchType { trends, users, posts }
@@ -26,14 +27,13 @@ class _SearchFeaturesState extends State<SearchFeatures> {
   List<DocumentSnapshot> _postResults = [];
 
   bool _isLoading = false;
-  bool _showClearButton = false; // <-- State baru untuk tombol hapus
+  bool _showClearButton = false;
   SearchType _searchType = SearchType.trends;
   List<String> _regions = [];
   String _selectedRegion = 'Global';
   bool _showSuggestions = false;
   final FocusNode _searchFocusNode = FocusNode();
   
-  // Popular search suggestions based on news content
   final List<String> _searchSuggestions = [
     'Lisa', 'Jisoo', 'Blackpink', 'Trump', 'Donald Trump',
     'Anime', 'Attack on Titan', 'Jujutsu Kaisen', 'Studio Ghibli',
@@ -48,9 +48,8 @@ class _SearchFeaturesState extends State<SearchFeatures> {
   void initState() {
     super.initState();
     _loadRegions();
-    _searchNews(""); // Memuat berita awal (default Global -> trending)
+    _searchNews("");
     
-    // Listener untuk mendeteksi perubahan teks dan fokus
     _controller.addListener(() {
       if (mounted) {
         final query = _controller.text;
@@ -105,7 +104,6 @@ class _SearchFeaturesState extends State<SearchFeatures> {
       if (mounted) {
         setState(() {
           _regions = regions;
-          // Ensure _selectedRegion is valid
           if (!_regions.contains(_selectedRegion)) {
             _selectedRegion = _regions.isNotEmpty ? _regions.first : 'Global';
           }
@@ -114,7 +112,7 @@ class _SearchFeaturesState extends State<SearchFeatures> {
     } catch (_) {
       if (mounted) {
         setState(() {
-          _regions = ['Global']; // Fallback
+          _regions = ['Global'];
           _selectedRegion = 'Global';
         });
       }
@@ -124,7 +122,6 @@ class _SearchFeaturesState extends State<SearchFeatures> {
   void _searchNews(String query) async {
     setState(() => _isLoading = true);
     try {
-      // When Global selected, SearchService will filter to region Global and isTrending:true
       final regionParam = _selectedRegion.isEmpty ? 'global' : _selectedRegion;
       final data = await _newsService.searchNews(
         query.isEmpty ? "" : query,
@@ -139,8 +136,7 @@ class _SearchFeaturesState extends State<SearchFeatures> {
   }
 
   void _searchUsers(String query) async {
-    // Users are searched via StreamBuilder in real-time, no need to store results
-    // This method is kept for consistency but doesn't need to do anything
+    // Users are searched via StreamBuilder in real-time
   }
 
   void _searchPosts(String query) async {
@@ -159,15 +155,14 @@ class _SearchFeaturesState extends State<SearchFeatures> {
     }
   }
 
-  // --- FUNGSI BARU UNTUK MENGHAPUS TEKS ---
   void _clearSearch() {
     _controller.clear();
     _filteredSuggestions = [];
     _showSuggestions = false;
     if (_searchType == SearchType.trends) {
-      _searchNews(""); // Kembali ke tampilan berita awal
+      _searchNews("");
     } else {
-      _searchUsers(""); // Kosongkan hasil pencarian user
+      _searchUsers("");
     }
     FocusScope.of(context).unfocus();
   }
@@ -200,13 +195,12 @@ class _SearchFeaturesState extends State<SearchFeatures> {
             hintStyle: const TextStyle(fontFamily: "Poppins", fontSize: 12),
             border: InputBorder.none,
             prefixIcon: const Icon(Icons.search, color: Colors.grey),
-            // --- PERUBAHAN DI SINI ---
             suffixIcon: _showClearButton
                 ? IconButton(
                     icon: const Icon(Icons.clear, color: Colors.grey),
                     onPressed: _clearSearch,
                   )
-                : null, // Tampilkan tombol hanya jika ada teks
+                : null,
           ),
         ),
       ),
@@ -234,7 +228,7 @@ class _SearchFeaturesState extends State<SearchFeatures> {
                       if (value != null) {
                         setState(() {
                           _searchType = value;
-                          _clearSearch(); // Hapus pencarian saat mengganti mode
+                          _clearSearch();
                         });
                       }
                     },
@@ -301,7 +295,6 @@ class _SearchFeaturesState extends State<SearchFeatures> {
               ],
             ),
           ),
-          // Search suggestions dropdown
           if (_showSuggestions)
             Positioned(
               top: 0,
@@ -378,7 +371,7 @@ class _SearchFeaturesState extends State<SearchFeatures> {
             .where('username',
                 isLessThanOrEqualTo: '${_controller.text.toLowerCase()}\uf8ff')
             .limit(10)
-            .snapshots(), // 🔥 realtime
+            .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -499,9 +492,12 @@ class _SearchFeaturesState extends State<SearchFeatures> {
 
           return GestureDetector(
             onTap: () {
-              // Navigate to post detail - you can implement UserPostDetailPage later
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Post detail: $postId')),
+              // ✅ NAVIGATE KE USER POST DETAIL PAGE
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => UserPostDetailPage(postId: postId),
+                ),
               );
             },
             child: Container(
@@ -564,7 +560,7 @@ class _SearchFeaturesState extends State<SearchFeatures> {
                             child: Wrap(
                               spacing: 4,
                               children: (postData['hashtags'] as List)
-                                  .take(3) // Show max 3 hashtags
+                                  .take(3)
                                   .map((hashtag) => Text(
                                         hashtag,
                                         style: TextStyle(

@@ -18,6 +18,7 @@ class FirestoreService {
   
   String? get currentUserId => _auth.currentUser?.uid;
 
+  // ========== USER POSTS OPERATIONS ==========
   
   Stream<DocumentSnapshot> getSingleUserPost(String postId) {
     return _firestore.collection('user_posts').doc(postId).snapshots();
@@ -39,113 +40,6 @@ class FirestoreService {
           'likes': FieldValue.arrayUnion([currentUserId])
         });
       }
-    }
-  }
-
-  Future<void> syncProfileLocally(String userId) async {
-    final doc = await _firestore.collection('users').doc(userId).get();
-    if (doc.exists) {
-      final data = doc.data();
-      if (data != null) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('profile_name', data['namaLengkap'] ?? '');
-        await prefs.setString('profile_nim', data['nim'] ?? '');
-        await prefs.setString('profile_username', data['username'] ?? '');
-        await prefs.setString(
-            'profile_image_url', data['profileImageUrl'] ?? '');
-      }
-    }
-  }
-  
-  // Get local profile image path
-  Future<String?> getLocalProfileImagePath(String userId) async {
-    final prefs = await SharedPreferences.getInstance();
-    final path = prefs.getString('profile_image_$userId');
-    if (path != null) {
-      final file = File(path);
-      if (await file.exists()) {
-        return path;
-      }
-    }
-    return null;
-  }
-
-  // Enhanced method for complete profile synchronization
-  Future<Map<String, dynamic>?> getCompleteUserProfile(String userId) async {
-    try {
-      final doc = await _firestore.collection('users').doc(userId).get();
-      if (doc.exists) {
-        return doc.data() as Map<String, dynamic>?;
-      }
-    } catch (e) {
-      debugPrint('Error getting complete user profile: $e');
-    }
-    return null;
-  }
-
-  // Update profile image immediately and trigger updates
-  Future<void> updateProfileImageImmediately(String userId, String? imageUrl) async {
-    try {
-      // Update SharedPreferences immediately
-      final prefs = await SharedPreferences.getInstance();
-      if (imageUrl != null) {
-        await prefs.setString('profile_image_url', imageUrl);
-      }
-      
-      // Trigger profile update stream
-      _profileUpdateController.add(userId);
-      
-      debugPrint('Profile image updated immediately for user: $userId');
-    } catch (e) {
-      debugPrint('Error updating profile image immediately: $e');
-    }
-  }
-
-  // Method to update profile data and sync everywhere
-  Future<String?> updateProfileAndSync({
-    required String userId,
-    required String name,
-    required String nim,
-    required String username,
-    String? imageUrl,
-  }) async {
-    try {
-      // Validate username if changed
-      final currentData = await getCompleteUserProfile(userId);
-      final currentUsername = currentData?['username']?.toString() ?? '';
-      
-      if (username.toLowerCase() != currentUsername.toLowerCase()) {
-        if (await isUsernameTaken(username, excludeUserId: userId)) {
-          return 'Username sudah digunakan oleh akun lain.';
-        }
-      }
-      
-      // Validate NIM if changed
-      final currentNim = currentData?['nim']?.toString() ?? '';
-      if (nim != currentNim) {
-        if (await isNimTaken(nim, excludeUserId: userId)) {
-          return 'NIM sudah terdaftar.';
-        }
-      }
-      
-      // Update Firestore
-      await _firestore.collection('users').doc(userId).set({
-        'namaLengkap': name,
-        'nim': nim,
-        'username': username.toLowerCase(),
-        'profileImageUrl': imageUrl,
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-      
-      // Sync to local storage
-      await syncProfileLocally(userId);
-      
-      // Notify all listeners about profile update
-      _profileUpdateController.add(userId);
-      
-      return null; // Success
-    } catch (e) {
-      return 'Gagal memperbarui profil: $e';
     }
   }
 
@@ -181,36 +75,6 @@ class FirestoreService {
         .snapshots();
   }
 
-  Stream<QuerySnapshot> getUserPosts(String userId) {
-    return _firestore
-        .collection('user_posts')
-        .where('userId', isEqualTo: userId)
-        .orderBy('timestamp', descending: true)
-        .snapshots();
-  }
-
-  Stream<DocumentSnapshot> streamUserData(String userId) {
-    return _firestore.collection('users').doc(userId).snapshots();
-  }
-
-  Future<bool> isNimTaken(String nim, {String? excludeUserId}) async {
-    final query = _firestore
-        .collection('users')
-        .where('nim', isEqualTo: nim)
-        .limit(2); // Get 2 to check if there are other users
-    
-    final result = await query.get();
-    
-    if (excludeUserId != null) {
-      // Filter out the current user
-      final otherUsers = result.docs.where((doc) => doc.id != excludeUserId);
-      return otherUsers.isNotEmpty;
-    }
-    
-    return result.docs.isNotEmpty;
-  }
-
-
   // Extract hashtags from text
   List<String> extractHashtags(String text) {
     final RegExp hashtagRegex = RegExp(r'#\w+');
@@ -228,31 +92,44 @@ class FirestoreService {
         .get();
   }
 
-  // Search user posts by text (including hashtags)
+  // Search user posts by text (OPTIMIZED VERSION)
   Future<List<DocumentSnapshot>> searchUserPostsByText(String query) async {
-    final queryLower = query.toLowerCase();
+    if (query.trim().isEmpty) return [];
     
-    // If query starts with #, search by hashtag
-    if (queryLower.startsWith('#')) {
-      final result = await searchUserPostsByHashtag(queryLower);
-      return result.docs;
-    }
-    
-    // Otherwise search in description and hashtags
-    final results = await _firestore
-        .collection('user_posts')
-        .orderBy('timestamp', descending: true)
-        .limit(50)
-        .get();
-    
-    return results.docs.where((doc) {
-      final data = doc.data() as Map<String, dynamic>;
-      final description = (data['description'] ?? '').toString().toLowerCase();
-      final hashtags = List<String>.from(data['hashtags'] ?? []);
+    try {
+      final queryLower = query.toLowerCase().trim();
       
-      return description.contains(queryLower) || 
-             hashtags.any((tag) => tag.contains(queryLower));
-    }).toList();
+      // Jika query dimulai dengan #, cari berdasarkan hashtags
+      if (queryLower.startsWith('#')) {
+        final result = await searchUserPostsByHashtag(queryLower);
+        return result.docs;
+      }
+      
+      // Ambil semua posts (atau limit yang reasonable)
+      final descResults = await _firestore
+          .collection('user_posts')
+          .orderBy('timestamp', descending: true)
+          .limit(100)
+          .get();
+      
+      // Filter di client side
+      final filtered = descResults.docs.where((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        final descriptionLower = (data['descriptionLowercase'] ?? 
+                                  data['description'] ?? '').toString().toLowerCase();
+        final hashtags = List<String>.from(data['hashtags'] ?? []);
+        final username = (data['username'] ?? '').toString().toLowerCase();
+        
+        return descriptionLower.contains(queryLower) || 
+               hashtags.any((tag) => tag.contains(queryLower)) ||
+               username.contains(queryLower);
+      }).toList();
+      
+      return filtered;
+    } catch (e) {
+      debugPrint('Error searching user posts: $e');
+      return [];
+    }
   }
 
   // Get trending hashtags
@@ -267,7 +144,6 @@ class FirestoreService {
       return result.docs.map((doc) => doc.id).toList();
     } catch (e) {
       debugPrint('Error getting trending hashtags: $e');
-      // Return some default trending hashtags if Firestore access fails
       return ['#photo', '#travel', '#food', '#nature', '#life', '#love', '#beautiful', '#happy', '#art', '#style'];
     }
   }
@@ -288,10 +164,10 @@ class FirestoreService {
       await batch.commit();
     } catch (e) {
       debugPrint('Error updating hashtag counts (permission issue - continuing): $e');
-      // Continue without failing the upload if hashtag counting fails
     }
   }
 
+  // Upload post with descriptionLowercase field
   Future<void> uploadPost({
     required File imageFile,
     required String description,
@@ -320,7 +196,8 @@ class FirestoreService {
         'username': username,
         'imageUrl': downloadUrl,
         'description': description,
-        'hashtags': hashtags, // Add hashtags array
+        'descriptionLowercase': description.toLowerCase(), // PENTING untuk search!
+        'hashtags': hashtags,
         'timestamp': FieldValue.serverTimestamp(),
         'likes': [],
         'commentCount': 0,
@@ -335,6 +212,134 @@ class FirestoreService {
       rethrow;
     }
   }
+
+  // ========== PROFILE OPERATIONS ==========
+
+  Future<void> syncProfileLocally(String userId) async {
+    final doc = await _firestore.collection('users').doc(userId).get();
+    if (doc.exists) {
+      final data = doc.data();
+      if (data != null) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('profile_name', data['namaLengkap'] ?? '');
+        await prefs.setString('profile_nim', data['nim'] ?? '');
+        await prefs.setString('profile_username', data['username'] ?? '');
+        await prefs.setString(
+            'profile_image_url', data['profileImageUrl'] ?? '');
+      }
+    }
+  }
+  
+  Future<String?> getLocalProfileImagePath(String userId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final path = prefs.getString('profile_image_$userId');
+    if (path != null) {
+      final file = File(path);
+      if (await file.exists()) {
+        return path;
+      }
+    }
+    return null;
+  }
+
+  Future<Map<String, dynamic>?> getCompleteUserProfile(String userId) async {
+    try {
+      final doc = await _firestore.collection('users').doc(userId).get();
+      if (doc.exists) {
+        return doc.data() as Map<String, dynamic>?;
+      }
+    } catch (e) {
+      debugPrint('Error getting complete user profile: $e');
+    }
+    return null;
+  }
+
+  Future<void> updateProfileImageImmediately(String userId, String? imageUrl) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (imageUrl != null) {
+        await prefs.setString('profile_image_url', imageUrl);
+      }
+      
+      _profileUpdateController.add(userId);
+      
+      debugPrint('Profile image updated immediately for user: $userId');
+    } catch (e) {
+      debugPrint('Error updating profile image immediately: $e');
+    }
+  }
+
+  Future<String?> updateProfileAndSync({
+    required String userId,
+    required String name,
+    required String nim,
+    required String username,
+    String? imageUrl,
+  }) async {
+    try {
+      final currentData = await getCompleteUserProfile(userId);
+      final currentUsername = currentData?['username']?.toString() ?? '';
+      
+      if (username.toLowerCase() != currentUsername.toLowerCase()) {
+        if (await isUsernameTaken(username, excludeUserId: userId)) {
+          return 'Username sudah digunakan oleh akun lain.';
+        }
+      }
+      
+      final currentNim = currentData?['nim']?.toString() ?? '';
+      if (nim != currentNim) {
+        if (await isNimTaken(nim, excludeUserId: userId)) {
+          return 'NIM sudah terdaftar.';
+        }
+      }
+      
+      await _firestore.collection('users').doc(userId).set({
+        'namaLengkap': name,
+        'nim': nim,
+        'username': username.toLowerCase(),
+        'profileImageUrl': imageUrl,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      
+      await syncProfileLocally(userId);
+      
+      _profileUpdateController.add(userId);
+      
+      return null;
+    } catch (e) {
+      return 'Gagal memperbarui profil: $e';
+    }
+  }
+
+  Stream<QuerySnapshot> getUserPosts(String userId) {
+    return _firestore
+        .collection('user_posts')
+        .where('userId', isEqualTo: userId)
+        .orderBy('timestamp', descending: true)
+        .snapshots();
+  }
+
+  Stream<DocumentSnapshot> streamUserData(String userId) {
+    return _firestore.collection('users').doc(userId).snapshots();
+  }
+
+  Future<bool> isNimTaken(String nim, {String? excludeUserId}) async {
+    final query = _firestore
+        .collection('users')
+        .where('nim', isEqualTo: nim)
+        .limit(2);
+    
+    final result = await query.get();
+    
+    if (excludeUserId != null) {
+      final otherUsers = result.docs.where((doc) => doc.id != excludeUserId);
+      return otherUsers.isNotEmpty;
+    }
+    
+    return result.docs.isNotEmpty;
+  }
+
+  // ========== USER OPERATIONS ==========
 
   Future<DocumentSnapshot> getUserData(String userId) {
     return _firestore.collection('users').doc(userId).get();
@@ -413,6 +418,77 @@ class FirestoreService {
         .map((snapshot) => snapshot.size);
   }
 
+  Future<void> updateUserData(String userId, Map<String, dynamic> data) async {
+    try {
+      await _firestore
+          .collection('users')
+          .doc(userId)
+          .set(data, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('Error updating user data: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> createUserDocument({
+    required User user,
+    required String username,
+  }) async {
+    try {
+      await _firestore.collection('users').doc(user.uid).set({
+        'uid': user.uid,
+        'username': username.toLowerCase(),
+        'email': user.email,
+        'namaLengkap': '',
+        'nim': '',
+        'profileImageUrl': null,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      debugPrint('Error creating user document: $e');
+      rethrow;
+    }
+  }
+
+  Future<bool> isUsernameTaken(String username, {String? excludeUserId}) async {
+    final query = _firestore
+        .collection('users')
+        .where('username', isEqualTo: username.toLowerCase())
+        .limit(2);
+    
+    final result = await query.get();
+    
+    if (excludeUserId != null) {
+      final otherUsers = result.docs.where((doc) => doc.id != excludeUserId);
+      return otherUsers.isNotEmpty;
+    }
+    
+    return result.docs.isNotEmpty;
+  }
+
+  Future<String?> getEmailFromUsername(String username) async {
+    try {
+      final result = await _firestore
+          .collection('users')
+          .where('username', isEqualTo: username.toLowerCase())
+          .limit(1)
+          .get();
+      if (result.docs.isNotEmpty) {
+        return result.docs.first.data()['email'] as String?;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error getting email from username: $e');
+      return null;
+    }
+  }
+
+  // ========== NEWS ARTICLE POSTS OPERATIONS ==========
+
+  String _getPostId(String articleUrl) {
+    return articleUrl.hashCode.abs().toString();
+  }
+
   Future<void> addComment(String articleUrl, String commentText) async {
     if (currentUserId == null) return;
     if (commentText.trim().isEmpty) return;
@@ -451,76 +527,6 @@ class FirestoreService {
     }
   }
 
-  Future<void> updateUserData(String userId, Map<String, dynamic> data) async {
-    try {
-      await _firestore
-          .collection('users')
-          .doc(userId)
-          .set(data, SetOptions(merge: true));
-    } catch (e) {
-      debugPrint('Error updating user data: $e');
-      rethrow;
-    }
-  }
-
-  Future<void> createUserDocument({
-    required User user,
-    required String username,
-  }) async {
-    try {
-      await _firestore.collection('users').doc(user.uid).set({
-        'uid': user.uid,
-        'username': username.toLowerCase(),
-        'email': user.email,
-        'namaLengkap': '',
-        'nim': '',
-        'profileImageUrl': null,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-    } catch (e) {
-      debugPrint('Error creating user document: $e');
-      rethrow;
-    }
-  }
-
-  Future<bool> isUsernameTaken(String username, {String? excludeUserId}) async {
-    final query = _firestore
-        .collection('users')
-        .where('username', isEqualTo: username.toLowerCase())
-        .limit(2); // Get 2 to check if there are other users
-    
-    final result = await query.get();
-    
-    if (excludeUserId != null) {
-      // Filter out the current user
-      final otherUsers = result.docs.where((doc) => doc.id != excludeUserId);
-      return otherUsers.isNotEmpty;
-    }
-    
-    return result.docs.isNotEmpty;
-  }
-
-  Future<String?> getEmailFromUsername(String username) async {
-    try {
-      final result = await _firestore
-          .collection('users')
-          .where('username', isEqualTo: username.toLowerCase())
-          .limit(1)
-          .get();
-      if (result.docs.isNotEmpty) {
-        return result.docs.first.data()['email'] as String?;
-      }
-      return null;
-    } catch (e) {
-      debugPrint('Error getting email from username: $e');
-      return null;
-    }
-  }
-
-  String _getPostId(String articleUrl) {
-    return articleUrl.hashCode.abs().toString();
-  }
-
   Future<void> toggleLike(String articleUrl, {String? imageUrl, String? content, String? title}) async {
     if (currentUserId == null) return;
     final postId = _getPostId(articleUrl);
@@ -541,7 +547,6 @@ class FirestoreService {
             transaction.update(postRef, {'likes': currentLikes - 1});
           }
         } else {
-          // Store complete article information for liked posts
           transaction.set(userLikeRef, {
             'postId': postId,
             'articleUrl': articleUrl,
@@ -722,6 +727,7 @@ class FirestoreService {
   }
 }
 
+// Helper function outside class
 Future<void> syncProfileLocally(String userId) async {
   final doc =
       await FirebaseFirestore.instance.collection('users').doc(userId).get();
