@@ -28,8 +28,8 @@ class NewsFeedGrid extends StatelessWidget {
       mainAxisSpacing: 10,
       crossAxisSpacing: 10,
       padding: const EdgeInsets.all(10),
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
+      shrinkWrap: false,
+      physics: const BouncingScrollPhysics(),
       itemCount: articles.length,
       itemBuilder: (context, index) {
         final article = articles[index];

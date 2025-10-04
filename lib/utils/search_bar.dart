@@ -24,7 +24,7 @@ class UntarestSearchBar extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.9),
+          color: Colors.white.withValues(alpha: 0.9),
           borderRadius: BorderRadius.circular(20),
         ),
         child: TextField(
@@ -45,7 +45,7 @@ class UntarestSearchBar extends StatelessWidget {
                 'assets/images/logo_Search.svg',
                 width: 24,
                 height: 15,
-                color: Colors.grey,
+                colorFilter: const ColorFilter.mode(Colors.grey, BlendMode.srcIn),
               ),
             ),
           ),

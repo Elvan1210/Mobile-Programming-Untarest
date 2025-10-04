@@ -100,6 +100,7 @@ class _LoginPageState extends State<LoginPage> {
         if (keepMeLoggedIn) {
           await saveLoginState(true);
         }
+        if (!mounted) return;
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const HomePage()),

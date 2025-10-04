@@ -67,15 +67,15 @@ class _TabButton extends StatelessWidget {
         width: 100,
         height: 100,
         decoration: BoxDecoration(
-          color: isSelected ? Colors.white : Colors.white.withOpacity(0.3),
+          color: isSelected ? Colors.white : Colors.white.withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(15),
           border: Border.all(
-            color: isSelected ? untarRed : Colors.white.withOpacity(0.5),
+            color: isSelected ? untarRed : Colors.white.withValues(alpha: 0.5),
             width: isSelected ? 3 : 1,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(isSelected ? 0.3 : 0.1),
+              color: Colors.black.withValues(alpha: isSelected ? 0.3 : 0.1),
               blurRadius: isSelected ? 10 : 5,
               offset: Offset(0, isSelected ? 4 : 2),
             ),
@@ -134,15 +134,15 @@ class _TabButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: isSelected 
               ? Colors.white 
-              : Colors.white.withOpacity(0.3),
+              : Colors.white.withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(15),
           border: Border.all(
-            color: isSelected ? untarRed : Colors.white.withOpacity(0.5),
+            color: isSelected ? untarRed : Colors.white.withValues(alpha: 0.5),
             width: isSelected ? 3 : 1,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(isSelected ? 0.3 : 0.1),
+              color: Colors.black.withValues(alpha: isSelected ? 0.3 : 0.1),
               blurRadius: isSelected ? 10 : 5,
               offset: Offset(0, isSelected ? 4 : 2),
             ),
