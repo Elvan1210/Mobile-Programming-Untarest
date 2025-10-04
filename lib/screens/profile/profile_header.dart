@@ -11,7 +11,7 @@ class ProfileHeader extends StatelessWidget {
     required this.name,
     required this.nim,
     this.profileImageUrl,
-    this.onEditPressed,
+    this.onEditPressed, required username,
   });
 
   @override
