@@ -12,7 +12,8 @@ import 'package:untarest_app/services/firestore_service.dart';
 import 'package:untarest_app/screens/auth/login_page.dart';
 import 'package:untarest_app/widgets/liked_posts_grid.dart';
 import 'package:untarest_app/widgets/saved_posts_grid.dart';
-import 'package:untarest_app/utils/constants.dart'; // Pastikan import ini ada
+import 'package:untarest_app/widgets/user_posts_grid.dart';
+import 'package:untarest_app/utils/constants.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -89,7 +90,7 @@ class _ProfilePageState extends State<ProfilePage> {
       String name, String nim, String username, String? imageUrl) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return 'User tidak login.';
-    if (_username != username) {
+    if (_username != username && username.isNotEmpty) {
       final usernameCheck = await FirebaseFirestore.instance
           .collection('users')
           .where('username', isEqualTo: username)
@@ -204,7 +205,7 @@ class _ProfilePageState extends State<ProfilePage> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: null, // Hapus title dari AppBar
+        title: null,
         actions: [
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.white),
@@ -224,22 +225,19 @@ class _ProfilePageState extends State<ProfilePage> {
           top: false,
           child: Column(
             children: [
-              // --- PERUBAHAN DI SINI ---
-              // ProfileHeader sekarang menampilkan nama lengkap & NIM
               ProfileHeader(
-                name: _name, // Nama Lengkap
-                nim: _nim,  // NIM
+                name: _name,
+                nim: _nim,
                 profileImageUrl: _profileImageUrl,
                 onEditPressed: _navigateToEditProfile,
               ),
-              // Menambahkan Username di bawah Header
               Text(
                 '@$_username',
                 style: const TextStyle(
                   fontFamily: 'Poppins',
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: primaryColor, // Warna merah
+                  color: primaryColor,
                 ),
               ),
               const SizedBox(height: 20),
@@ -253,7 +251,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   });
                 },
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 10),
               Expanded(
                 child: _buildTabContent(),
               ),
@@ -299,10 +297,14 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildTabContent() {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
     switch (_selectedTab) {
       case 0:
+        if (userId != null) {
+          return UserPostsGrid(userId: userId);
+        }
         return const Center(
-            child: Text('Feed Anda akan muncul di sini',
+            child: Text('User tidak ditemukan.',
                 style: TextStyle(color: Colors.black54)));
       case 1:
         return const LikedPostsGrid();

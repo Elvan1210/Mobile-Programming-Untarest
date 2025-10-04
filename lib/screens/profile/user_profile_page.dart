@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:untarest_app/services/firestore_service.dart';
 import 'package:untarest_app/screens/profile/profile_header.dart';
 import 'package:untarest_app/utils/constants.dart';
+import 'package:untarest_app/widgets/user_posts_grid.dart'; // <-- Import baru
 
 class UserProfilePage extends StatefulWidget {
   final String userId;
@@ -83,8 +84,9 @@ class _UserProfilePageState extends State<UserProfilePage> {
             final profileImageUrl = userData['profileImageUrl'];
 
             return SafeArea(
-              child: ListView(
+              child: Column(
                 children: [
+                  // Widget ProfileHeader, _buildStatsRow, dan tombol tidak berubah
                   ProfileHeader(
                     name: username,
                     nim: nim,
@@ -103,14 +105,11 @@ class _UserProfilePageState extends State<UserProfilePage> {
                   ),
                   const SizedBox(height: 20),
                   const Divider(color: Colors.black38, indent: 20, endIndent: 20),
-                  const Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Center(
-                      child: Text(
-                        'Pengguna ini belum mengupload foto.',
-                        style: TextStyle(fontFamily: 'Poppins', color: Colors.black54),
-                      ),
-                    ),
+                  
+                  // --- PERUBAHAN UTAMA DI SINI ---
+                  // Mengganti pesan statis dengan widget galeri foto
+                  Expanded(
+                    child: UserPostsGrid(userId: widget.userId),
                   ),
                 ],
               ),

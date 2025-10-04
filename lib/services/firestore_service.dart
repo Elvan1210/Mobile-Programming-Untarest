@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloudinary_public/cloudinary_public.dart';
 
 class FirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -7,12 +9,113 @@ class FirestoreService {
 
   String? get currentUserId => _auth.currentUser?.uid;
 
-  // --- FUNGSI UNTUK DATA USER ---
+  // --- FUNGSI BARU UNTUK INTERAKSI POST PENGGUNA ---
+
+  // Mengambil data satu post secara real-time
+  Stream<DocumentSnapshot> getSingleUserPost(String postId) {
+    return _firestore.collection('user_posts').doc(postId).snapshots();
+  }
+
+  // Toggle like pada post pengguna
+  Future<void> toggleUserPostLike(String postId) async {
+    if (currentUserId == null) return;
+    final postRef = _firestore.collection('user_posts').doc(postId);
+
+    final postDoc = await postRef.get();
+    if (postDoc.exists) {
+      List likes = (postDoc.data()! as Map<String, dynamic>)['likes'] ?? [];
+      if (likes.contains(currentUserId)) {
+        postRef.update({
+          'likes': FieldValue.arrayRemove([currentUserId])
+        });
+      } else {
+        postRef.update({
+          'likes': FieldValue.arrayUnion([currentUserId])
+        });
+      }
+    }
+  }
+
+  // Menambahkan komentar pada post pengguna
+  Future<void> addUserPostComment(String postId, String commentText) async {
+    if (currentUserId == null || commentText.trim().isEmpty) return;
+    
+    final userDoc = await getUserData(currentUserId!);
+    final username = (userDoc.data() as Map<String, dynamic>?)?['username'] ?? 'unknown';
+
+    await _firestore.collection('user_posts').doc(postId).collection('comments').add({
+      'userId': currentUserId,
+      'username': username,
+      'text': commentText.trim(),
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+    // Update jumlah komentar
+    _firestore.collection('user_posts').doc(postId).update({
+      'commentCount': FieldValue.increment(1)
+    });
+  }
+
+  // Mengambil semua komentar dari sebuah post pengguna
+  Stream<QuerySnapshot> getUserPostComments(String postId) {
+    return _firestore
+        .collection('user_posts')
+        .doc(postId)
+        .collection('comments')
+        .orderBy('timestamp', descending: true)
+        .snapshots();
+  }
+
+  // --- KODE LAMA KAMU DIMULAI DARI SINI (TIDAK ADA YANG DIHAPUS) ---
+
+  Stream<QuerySnapshot> getUserPosts(String userId) {
+    return _firestore
+        .collection('user_posts')
+        .where('userId', isEqualTo: userId)
+        .orderBy('timestamp', descending: true)
+        .snapshots();
+  }
+
+  Future<void> uploadPost({
+    required File imageFile,
+    required String description,
+  }) async {
+    if (currentUserId == null) throw Exception("User tidak login.");
+    try {
+      final userDoc = await getUserData(currentUserId!);
+      final username = (userDoc.data() as Map<String, dynamic>?)?['username'] ?? 'unknown_user';
+      
+      final cloudinary = CloudinaryPublic(
+        'da2cimmel',
+        'untarest-mobprog-app',
+        cache: false
+      );
+
+      CloudinaryResponse response = await cloudinary.uploadFile(
+        CloudinaryFile.fromFile(imageFile.path, resourceType: CloudinaryResourceType.Image),
+      );
+
+      final String downloadUrl = response.secureUrl;
+
+      await _firestore.collection('user_posts').add({
+        'userId': currentUserId,
+        'username': username,
+        'imageUrl': downloadUrl,
+        'description': description,
+        'timestamp': FieldValue.serverTimestamp(),
+        'likes': [], 
+        'commentCount': 0,
+      });
+
+    } catch (e) {
+      print('Error uploading post to Cloudinary: $e');
+      rethrow;
+    }
+  }
+  
   Future<DocumentSnapshot> getUserData(String userId) {
     return _firestore.collection('users').doc(userId).get();
   }
 
-  // --- FUNGSI PENCARIAN USER ---
   Future<QuerySnapshot> searchUsers(String query) async {
     if (query.isEmpty) {
       return _firestore.collection('users').limit(0).get();
@@ -25,106 +128,56 @@ class FirestoreService {
         .get();
   }
   
-  // --- FUNGSI-FUNGSI BARU UNTUK FOLLOW/UNFOLLOW ---
   Future<void> followUser(String userIdToFollow) async {
     if (currentUserId == null) return;
-    
-    await _firestore
-        .collection('users')
-        .doc(currentUserId)
-        .collection('following')
-        .doc(userIdToFollow)
-        .set({});
-        
-    await _firestore
-        .collection('users')
-        .doc(userIdToFollow)
-        .collection('followers')
-        .doc(currentUserId)
-        .set({});
+    await _firestore.collection('users').doc(currentUserId).collection('following').doc(userIdToFollow).set({});
+    await _firestore.collection('users').doc(userIdToFollow).collection('followers').doc(currentUserId).set({});
   }
 
   Future<void> unfollowUser(String userIdToUnfollow) async {
     if (currentUserId == null) return;
-
-    await _firestore
-        .collection('users')
-        .doc(currentUserId)
-        .collection('following')
-        .doc(userIdToUnfollow)
-        .delete();
-
-    await _firestore
-        .collection('users')
-        .doc(userIdToUnfollow)
-        .collection('followers')
-        .doc(currentUserId)
-        .delete();
+    await _firestore.collection('users').doc(currentUserId).collection('following').doc(userIdToUnfollow).delete();
+    await _firestore.collection('users').doc(userIdToUnfollow).collection('followers').doc(currentUserId).delete();
   }
 
   Future<bool> isFollowing(String otherUserId) async {
     if (currentUserId == null) return false;
-    final doc = await _firestore
-        .collection('users')
-        .doc(currentUserId)
-        .collection('following')
-        .doc(otherUserId)
-        .get();
+    final doc = await _firestore.collection('users').doc(currentUserId).collection('following').doc(otherUserId).get();
     return doc.exists;
   }
 
   Stream<int> getFollowersCount(String userId) {
-    return _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('followers')
-        .snapshots()
-        .map((snapshot) => snapshot.size);
+    return _firestore.collection('users').doc(userId).collection('followers').snapshots().map((snapshot) => snapshot.size);
   }
 
   Stream<int> getFollowingCount(String userId) {
-    return _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('following')
-        .snapshots()
-        .map((snapshot) => snapshot.size);
+    return _firestore.collection('users').doc(userId).collection('following').snapshots().map((snapshot) => snapshot.size);
   }
 
-  // --- FUNGSI addComment YANG SUDAH DIPERBAIKI ---
   Future<void> addComment(String articleUrl, String commentText) async {
     if (currentUserId == null) return;
     if (commentText.trim().isEmpty) return;
-
     final postId = _getPostId(articleUrl);
     final postRef = _firestore.collection('posts').doc(postId);
-
     try {
       final userDoc = await getUserData(currentUserId!);
       final username = (userDoc.data() as Map<String, dynamic>?)?['username'] ?? 'user_gagal';
-
       await _firestore.runTransaction((transaction) async {
         final postDoc = await transaction.get(postRef);
         final commentRef = postRef.collection('comments').doc();
-        
         transaction.set(commentRef, {
           'userId': currentUserId,
           'username': username,
           'text': commentText.trim(),
           'timestamp': FieldValue.serverTimestamp(),
         });
-
         if (postDoc.exists) {
           final currentCount = postDoc.data()?['commentCount'] ?? 0;
           transaction.update(postRef, {'commentCount': currentCount + 1});
         } else {
           transaction.set(postRef, {
-            'postId': postId,
-            'articleUrl': articleUrl,
-            'likes': 0,
-            'saves': 0,
-            'commentCount': 1,
-            'createdAt': FieldValue.serverTimestamp(),
+            'postId': postId, 'articleUrl': articleUrl, 'likes': 0, 'saves': 0,
+            'commentCount': 1, 'createdAt': FieldValue.serverTimestamp(),
           });
         }
       });
@@ -134,7 +187,6 @@ class FirestoreService {
     }
   }
 
-  // --- SISA KODE LAINNYA ---
   Future<void> updateUserData(String userId, Map<String, dynamic> data) async {
     try {
       await _firestore.collection('users').doc(userId).set(data, SetOptions(merge: true));
@@ -147,12 +199,8 @@ class FirestoreService {
   Future<void> createUserDocument({ required User user, required String username, }) async {
     try {
       await _firestore.collection('users').doc(user.uid).set({
-        'uid': user.uid,
-        'username': username.toLowerCase(),
-        'email': user.email,
-        'namaLengkap': '',
-        'nim': '',
-        'profileImageUrl': null,
+        'uid': user.uid, 'username': username.toLowerCase(), 'email': user.email,
+        'namaLengkap': '', 'nim': '', 'profileImageUrl': null,
         'createdAt': FieldValue.serverTimestamp(),
       });
     } catch (e) {
@@ -285,9 +333,9 @@ class FirestoreService {
     return _firestore.collection('users').doc(currentUserId).collection('savedPosts').orderBy('timestamp', descending: true).snapshots();
   }
 
-Stream<QuerySnapshot> getLikedPosts() {
-  if (currentUserId == null) return Stream.empty();
-  return _firestore.collection('users').doc(currentUserId).collection('likedPosts').orderBy('timestamp', descending: true).snapshots();
-}
+  Stream<QuerySnapshot> getLikedPosts() {
+    if (currentUserId == null) return Stream.empty();
+    return _firestore.collection('users').doc(currentUserId).collection('likedPosts').orderBy('timestamp', descending: true).snapshots();
+  }
 }
 
