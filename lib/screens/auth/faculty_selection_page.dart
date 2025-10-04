@@ -3,20 +3,23 @@ import 'package:untarest_app/screens/home/home_page.dart';
 import 'package:untarest_app/services/auth_service.dart';
 import 'package:untarest_app/services/firestore_service.dart';
 import 'package:untarest_app/utils/constants.dart';
+import 'package:untarest_app/utils/faculty_validation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class FacultySelectionPage extends StatefulWidget {
-  // Memastikan class ini bisa menerima username
   final String username;
   final String email;
   final String password;
+  final String nim;
+  final String? detectedFaculty;
 
   const FacultySelectionPage({
     super.key,
-    // Memastikan constructor ini WAJIB menerima username
     required this.username,
     required this.email,
     required this.password,
+    required this.nim,
+    this.detectedFaculty,
   });
 
   @override
@@ -28,6 +31,15 @@ class _FacultySelectionPageState extends State<FacultySelectionPage> {
   final _firestoreService = FirestoreService();
   String? _selectedFaculty;
   bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Auto-select the detected faculty from NIM if available
+    if (widget.detectedFaculty != null) {
+      _selectedFaculty = widget.detectedFaculty;
+    }
+  }
 
   final List<String> _faculties = [
     'FK - Fakultas Kedokteran',
@@ -48,6 +60,19 @@ class _FacultySelectionPageState extends State<FacultySelectionPage> {
       return;
     }
 
+    // Validate NIM against selected faculty
+    final nimValidation = FacultyValidation.validateNIM(widget.nim, _selectedFaculty);
+    if (!nimValidation.isValid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${nimValidation.errorMessage}'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
@@ -63,11 +88,13 @@ class _FacultySelectionPageState extends State<FacultySelectionPage> {
       if (!mounted) return;
 
       if (user != null) {
-        // Menyimpan fakultas ke profil user
+        // Save faculty and NIM to user profile
         await _firestoreService.updateUserData(user.uid, {
           'faculty': _selectedFaculty,
+          'nim': widget.nim,
         });
 
+        if (!mounted) return;
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (context) => const HomePage()),
@@ -106,7 +133,7 @@ class _FacultySelectionPageState extends State<FacultySelectionPage> {
             ),
           ),
           Container(
-            color: Colors.black.withOpacity(0.5),
+            color: Colors.black.withValues(alpha: 0.5),
           ),
           SafeArea(
             child: Column(
@@ -119,7 +146,7 @@ class _FacultySelectionPageState extends State<FacultySelectionPage> {
                         onPressed: () => Navigator.pop(context),
                         icon: const Icon(Icons.arrow_back, color: Colors.white),
                         style: IconButton.styleFrom(
-                          backgroundColor: Colors.black.withOpacity(0.5),
+                          backgroundColor: Colors.black.withValues(alpha: 0.5),
                         ),
                       ),
                     ],
@@ -153,7 +180,44 @@ class _FacultySelectionPageState extends State<FacultySelectionPage> {
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
-                            const SizedBox(height: 32),
+                            const SizedBox(height: 12),
+                            // NIM Information Display
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.blue[50],
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.blue[200]!),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Informasi NIM',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.blue,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'NIM: ${FacultyValidation.formatNIMDisplay(widget.nim)}',
+                                    style: const TextStyle(fontSize: 13),
+                                  ),
+                                  if (widget.detectedFaculty != null) 
+                                    Text(
+                                      'Fakultas terdeteksi: ${widget.detectedFaculty}',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.green,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 20),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12.0),
                               decoration: BoxDecoration(
@@ -188,7 +252,7 @@ class _FacultySelectionPageState extends State<FacultySelectionPage> {
                                 onPressed: _isLoading ? null : _register,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: primaryColor,
-                                  disabledBackgroundColor: primaryColor.withOpacity(0.6),
+                                  disabledBackgroundColor: primaryColor.withValues(alpha: 0.6),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(10),
                                   ),

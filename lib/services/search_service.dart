@@ -17,10 +17,50 @@ class SearchService {
       final matchesQuery = query.isEmpty ||
           (article.content.toLowerCase().contains(query.toLowerCase())) ||
           (article.title.toLowerCase().contains(query.toLowerCase()));
-      final matchesRegion = region == "all" ||
-          (article.region?.toLowerCase() == region.toLowerCase());
+      
+      bool matchesRegion;
+      if (region == "all") {
+        matchesRegion = true;
+      } else if (region.toLowerCase() == "global") {
+        // Global region shows trending posts with region: Global
+        matchesRegion = article.region?.toLowerCase() == "global" && article.isTrending;
+      } else {
+        matchesRegion = article.region?.toLowerCase() == region.toLowerCase();
+      }
+      
       return matchesQuery && matchesRegion;
     }).toList();
+  }
+  
+  // Get trending news for Global region
+  Future<List<NewsArticle>> getTrendingNews() async {
+    return searchNews("", region: "global");
+  }
+  
+  // Get available regions from news data
+  Future<List<String>> getAvailableRegions() async {
+    final String jsonString =
+        await rootBundle.loadString('assets/dummy_news/news.json');
+    final Map<String, dynamic> data = json.decode(jsonString);
+    final List articles = data['articles'] ?? [];
+    
+    final Set<String> regions = {};
+    for (var article in articles) {
+      if (article['region'] != null) {
+        regions.add(article['region']);
+      }
+    }
+    
+    final List<String> regionsList = regions.toList();
+    regionsList.sort();
+    
+    // Ensure Global is at the beginning, but don't add if it already exists
+    if (regionsList.contains("Global")) {
+      regionsList.remove("Global");
+    }
+    regionsList.insert(0, "Global");
+    
+    return regionsList;
   }
 
   String _regionToCountry(String region) {

@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:untarest_app/services/firestore_service.dart'; // Import FirestoreService
 
 class AuthService {
@@ -14,7 +15,7 @@ class AuthService {
       );
       return credential.user;
     } on FirebaseAuthException catch (e) {
-      print('Error during login: ${e.message}');
+      debugPrint('Error during login: ${e.message}');
       rethrow;
     }
   }
@@ -37,7 +38,7 @@ class AuthService {
       
       return user;
     } on FirebaseAuthException catch (e) {
-      print('Error during registration: ${e.message}');
+      debugPrint('Error during registration: ${e.message}');
       rethrow;
     }
   }

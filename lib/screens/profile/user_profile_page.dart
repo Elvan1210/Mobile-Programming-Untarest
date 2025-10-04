@@ -26,6 +26,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
   @override
   void initState() {
     super.initState();
+    _firestoreService.syncProfileLocally(widget.userId); // sinkronisasi awal
     _checkIfFollowing();
     _loadLocalImage(); // Dari versi temanmu
   }
@@ -83,7 +84,24 @@ class _UserProfilePageState extends State<UserProfilePage> {
       ),
     );
     if (result == true) {
+      // Comprehensive synchronization after profile edit
+      await _firestoreService.syncProfileLocally(widget.userId);
       await _loadLocalImage();
+
+      // Force refresh the stream data by rebuilding
+      if (mounted) {
+        setState(() {});
+      }
+
+      // Show confirmation message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Profil berhasil diperbarui dan disinkronkan'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
     }
   }
 
@@ -107,9 +125,9 @@ class _UserProfilePageState extends State<UserProfilePage> {
             fit: BoxFit.cover,
           ),
         ),
-        // Menggunakan FutureBuilder karena lebih cocok dengan _loadProfileData
-        child: FutureBuilder<DocumentSnapshot>(
-          future: _firestoreService.getUserData(widget.userId),
+        // Using StreamBuilder for real-time updates instead of FutureBuilder
+        child: StreamBuilder<DocumentSnapshot>(
+          stream: _firestoreService.streamUserData(widget.userId),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(
@@ -133,7 +151,12 @@ class _UserProfilePageState extends State<UserProfilePage> {
                     nim: nim,
                     profileImageUrl: profileImageUrl,
                     // Tombol edit hanya muncul jika ini profil kita
-                    onEditPressed: isCurrentUser ? () => _navigateToEditProfile(name, nim, username, profileImageUrl) : null, username: null,
+                    onEditPressed: isCurrentUser
+                        ? () => _navigateToEditProfile(
+                            name, nim, username, profileImageUrl)
+                        : null,
+                    userId: widget.userId,
+                    username: null,
                   ),
                   const SizedBox(height: 20),
                   _buildStatsRow(),
@@ -241,4 +264,3 @@ class _UserProfilePageState extends State<UserProfilePage> {
     );
   }
 }
-

@@ -40,7 +40,12 @@ class _PostDetailPageState extends State<PostDetailPage> {
 
   Future<void> _toggleLike(bool isCurrentlyLiked) async {
     try {
-      await _firestoreService.toggleLike(widget.article.url);
+      await _firestoreService.toggleLike(
+        widget.article.url,
+        imageUrl: widget.article.urlToImage,
+        content: widget.article.content,
+        title: widget.article.title,
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -109,8 +114,8 @@ class _PostDetailPageState extends State<PostDetailPage> {
         _commentController.text.trim(),
       );
       _commentController.clear();
-      FocusScope.of(context).unfocus();
       if (mounted) {
+        FocusScope.of(context).unfocus();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
@@ -231,7 +236,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
                             children: [
                               CircleAvatar(
                                 radius: 20,
-                                backgroundColor: primaryColor.withOpacity(0.1),
+                                backgroundColor: primaryColor.withValues(alpha: 0.1),
                                 child: Text(
                                   username.isNotEmpty ? username[0].toUpperCase() : 'U',
                                   style: const TextStyle(
@@ -303,7 +308,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
                   color: Colors.white,
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       blurRadius: 10,
                       offset: const Offset(0, -2),
                     ),
@@ -447,7 +452,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
+                  color: Colors.black.withValues(alpha: 0.08),
                   blurRadius: 10,
                   offset: const Offset(0, -2),
                 ),

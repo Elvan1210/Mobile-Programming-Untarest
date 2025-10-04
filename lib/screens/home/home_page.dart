@@ -118,7 +118,7 @@ class _HomeContent extends StatefulWidget {
 
 class _HomeContentState extends State<_HomeContent> {
   final TextEditingController _searchController = TextEditingController();
-  String selectedCountry = "Indonesia";
+  String selectedCountry = "Global";
   List<NewsArticle> allNews = [];
   bool _isLoading = true;
   final FirestoreService _firestoreService = FirestoreService();
@@ -245,7 +245,7 @@ class _HomeContentState extends State<_HomeContent> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.95),
+                  color: Colors.white.withValues(alpha: 0.95),
                   borderRadius:
                       const BorderRadius.vertical(top: Radius.circular(25)),
                 ),
@@ -361,11 +361,11 @@ class _HomeContentState extends State<_HomeContent> {
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withValues(alpha: 0.9),
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
+                          color: Colors.black.withValues(alpha: 0.2),
                           blurRadius: 4,
                           offset: const Offset(0, 2),
                         ),
@@ -392,8 +392,8 @@ class _HomeContentState extends State<_HomeContent> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            primaryColor.withOpacity(0.3),
-            primaryColor.withOpacity(0.5),
+            primaryColor.withValues(alpha: 0.3),
+            primaryColor.withValues(alpha: 0.5),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -463,7 +463,7 @@ class _HomeContentState extends State<_HomeContent> {
   }
 }
 
-class _TrendingVibesSection extends StatelessWidget {
+class _TrendingVibesSection extends StatefulWidget {
   final String selectedCountry;
   final Function(String) onCountryChanged;
 
@@ -471,6 +471,32 @@ class _TrendingVibesSection extends StatelessWidget {
     required this.selectedCountry,
     required this.onCountryChanged,
   });
+  
+  @override
+  State<_TrendingVibesSection> createState() => _TrendingVibesSectionState();
+}
+
+class _TrendingVibesSectionState extends State<_TrendingVibesSection> {
+  List<String> _regions = ['Global'];
+  
+  @override
+  void initState() {
+    super.initState();
+    _loadRegions();
+  }
+  
+  Future<void> _loadRegions() async {
+    try {
+      final regions = await SearchService().getAvailableRegions();
+      if (mounted) {
+        setState(() {
+          _regions = regions;
+        });
+      }
+    } catch (_) {
+      // Keep default regions on error
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -479,10 +505,10 @@ class _TrendingVibesSection extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.8),
+          color: Colors.white.withValues(alpha: 0.8),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: const Color.fromARGB(255, 245, 218, 218).withOpacity(0.3),
+            color: const Color.fromARGB(255, 245, 218, 218).withValues(alpha: 0.3),
             width: 1,
           ),
         ),
@@ -509,11 +535,8 @@ class _TrendingVibesSection extends StatelessWidget {
               padding: EdgeInsets.zero,
               icon: const Icon(Icons.arrow_drop_down, color: Colors.black87),
               onPressed: () {
-                _showCountryPicker(context, [
-                  'Indonesia', 'USA', 'Japan', 'South Korea', 'China',
-                  'France', 'UK', 'Global',
-                ], (country) {
-                  onCountryChanged(country);
+                _showCountryPicker(context, _regions, (country) {
+                  widget.onCountryChanged(country);
                 });
               },
             ),
@@ -574,4 +597,3 @@ void _showCountryPicker(
     },
   );
 }
-
