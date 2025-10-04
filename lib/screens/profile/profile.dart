@@ -41,7 +41,7 @@ class _ProfilePageState extends State<ProfilePage> {
   Future<void> _logout() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('keepMeLoggedIn');
+      await prefs.clear(); // Menghapus semua data SharedPreferences saat logout
       await _authService.signOut();
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
@@ -161,7 +161,7 @@ class _ProfilePageState extends State<ProfilePage> {
           initialName: _name,
           initialNim: _nim,
           initialUsername: _username,
-          initialImageUrl: _profileImageUrl,
+          initialImageUrl: _profileImageUrl, userId: '',
         ),
       ),
     );
@@ -229,7 +229,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 name: _name,
                 nim: _nim,
                 profileImageUrl: _profileImageUrl,
-                onEditPressed: _navigateToEditProfile,
+                onEditPressed: _navigateToEditProfile, username: null,
               ),
               Text(
                 '@$_username',

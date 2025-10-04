@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:io';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:untarest_app/services/firestore_service.dart';
 import 'package:untarest_app/screens/profile/profile_header.dart';
 import 'package:untarest_app/utils/constants.dart';
-import 'package:untarest_app/widgets/user_posts_grid.dart'; // <-- Import baru
+import 'package:untarest_app/widgets/user_posts_grid.dart';
+import 'package:untarest_app/screens/profile/edit_profile.dart';
 
 class UserProfilePage extends StatefulWidget {
   final String userId;
@@ -18,11 +21,13 @@ class _UserProfilePageState extends State<UserProfilePage> {
   final FirestoreService _firestoreService = FirestoreService();
   bool _isFollowing = false;
   bool _isLoading = true;
+  String? _localImagePath; // Dari versi temanmu
 
   @override
   void initState() {
     super.initState();
     _checkIfFollowing();
+    _loadLocalImage(); // Dari versi temanmu
   }
 
   Future<void> _checkIfFollowing() async {
@@ -39,6 +44,19 @@ class _UserProfilePageState extends State<UserProfilePage> {
     }
   }
 
+  // Fungsi dari versi temanmu
+  Future<void> _loadLocalImage() async {
+    if (widget.userId == _firestoreService.currentUserId) {
+      final prefs = await SharedPreferences.getInstance();
+      final path = prefs.getString('profile_image_${widget.userId}');
+      if (path != null && await File(path).exists()) {
+        if (mounted) {
+          setState(() => _localImagePath = path);
+        }
+      }
+    }
+  }
+
   void _handleFollow() async {
     setState(() => _isFollowing = true);
     await _firestoreService.followUser(widget.userId);
@@ -49,6 +67,26 @@ class _UserProfilePageState extends State<UserProfilePage> {
     await _firestoreService.unfollowUser(widget.userId);
   }
 
+  // Fungsi navigasi dari versi temanmu
+  void _navigateToEditProfile(
+      String name, String nim, String username, String? profileImageUrl) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditProfilePage(
+          initialName: name,
+          userId: widget.userId,
+          initialNim: nim,
+          initialUsername: username,
+          initialImageUrl: profileImageUrl,
+        ),
+      ),
+    );
+    if (result == true) {
+      await _loadLocalImage();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool isCurrentUser = widget.userId == _firestoreService.currentUserId;
@@ -56,7 +94,8 @@ class _UserProfilePageState extends State<UserProfilePage> {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('Profil', style: TextStyle(fontFamily: 'Poppins', color: Colors.black)),
+        title: const Text('Profil',
+            style: TextStyle(fontFamily: 'Poppins', color: Colors.black)),
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black),
@@ -68,29 +107,33 @@ class _UserProfilePageState extends State<UserProfilePage> {
             fit: BoxFit.cover,
           ),
         ),
+        // Menggunakan FutureBuilder karena lebih cocok dengan _loadProfileData
         child: FutureBuilder<DocumentSnapshot>(
           future: _firestoreService.getUserData(widget.userId),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator(color: primaryColor));
+              return const Center(
+                  child: CircularProgressIndicator(color: primaryColor));
             }
             if (!snapshot.hasData || !snapshot.data!.exists) {
-              return const Center(child: Text('Pengguna tidak ditemukan.', style: TextStyle(color: Colors.black)));
+              return const Center(child: Text('Pengguna tidak ditemukan.'));
             }
 
             final userData = snapshot.data!.data() as Map<String, dynamic>;
-            final username = userData['username'] ?? 'No Username';
-            final nim = userData['nim'] ?? '';
+            String name = userData['namaLengkap'] ?? 'Nama Lengkap';
+            String username = userData['username'] ?? 'No Username';
+            String nim = userData['nim'] ?? '';
             final profileImageUrl = userData['profileImageUrl'];
 
             return SafeArea(
               child: Column(
                 children: [
-                  // Widget ProfileHeader, _buildStatsRow, dan tombol tidak berubah
                   ProfileHeader(
-                    name: username,
+                    name: name,
                     nim: nim,
                     profileImageUrl: profileImageUrl,
+                    // Tombol edit hanya muncul jika ini profil kita
+                    onEditPressed: isCurrentUser ? () => _navigateToEditProfile(name, nim, username, profileImageUrl) : null, username: null,
                   ),
                   const SizedBox(height: 20),
                   _buildStatsRow(),
@@ -98,16 +141,18 @@ class _UserProfilePageState extends State<UserProfilePage> {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 50.0),
                     child: _isLoading
-                        ? const Center(child: CircularProgressIndicator(color: primaryColor))
+                        ? const Center(
+                            child:
+                                CircularProgressIndicator(color: primaryColor))
                         : isCurrentUser
-                            ? _buildEditProfileButton()
+                            ? _buildEditProfileButton(
+                                name, nim, username, profileImageUrl)
                             : _buildFollowButton(),
                   ),
                   const SizedBox(height: 20),
-                  const Divider(color: Colors.black38, indent: 20, endIndent: 20),
-                  
-                  // --- PERUBAHAN UTAMA DI SINI ---
-                  // Mengganti pesan statis dengan widget galeri foto
+                  const Divider(
+                      color: Colors.black38, indent: 20, endIndent: 20),
+                  // Menampilkan galeri foto (dari versi kita)
                   Expanded(
                     child: UserPostsGrid(userId: widget.userId),
                   ),
@@ -124,8 +169,10 @@ class _UserProfilePageState extends State<UserProfilePage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        _buildStatItem("Followers", _firestoreService.getFollowersCount(widget.userId)),
-        _buildStatItem("Following", _firestoreService.getFollowingCount(widget.userId)),
+        _buildStatItem(
+            "Followers", _firestoreService.getFollowersCount(widget.userId)),
+        _buildStatItem(
+            "Following", _firestoreService.getFollowingCount(widget.userId)),
       ],
     );
   }
@@ -158,32 +205,39 @@ class _UserProfilePageState extends State<UserProfilePage> {
         onPressed: _handleUnfollow,
         style: OutlinedButton.styleFrom(
           side: const BorderSide(color: Colors.black54),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
-        child: const Text('Following', style: TextStyle(color: Colors.black, fontFamily: 'Poppins')),
+        child: const Text('Following',
+            style: TextStyle(color: Colors.black, fontFamily: 'Poppins')),
       );
     } else {
       return ElevatedButton(
         onPressed: _handleFollow,
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryColor,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
-        child: const Text('Follow', style: TextStyle(color: Colors.white, fontFamily: 'Poppins')),
+        child: const Text('Follow',
+            style: TextStyle(color: Colors.white, fontFamily: 'Poppins')),
       );
     }
   }
 
-  Widget _buildEditProfileButton() {
+  Widget _buildEditProfileButton(
+      String name, String nim, String username, String? profileImageUrl) {
     return ElevatedButton(
-      onPressed: () {
-        // Navigasi ke halaman Edit Profile jika diperlukan
-      },
+      onPressed: () =>
+          _navigateToEditProfile(name, nim, username, profileImageUrl),
       style: ElevatedButton.styleFrom(
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
-      child: const Text('Edit Profile', style: TextStyle(color: Colors.black, fontFamily: 'Poppins')),
+      child: const Text(
+        'Edit Profile',
+        style: TextStyle(color: Colors.black, fontFamily: 'Poppins'),
+      ),
     );
   }
 }
