@@ -23,7 +23,7 @@ class _SearchFeaturesState extends State<SearchFeatures> {
 
   List<NewsArticle> _newsResults = [];
   List<QueryDocumentSnapshot> _userResults = [];
-  
+
   bool _isLoading = false;
   bool _showClearButton = false; // <-- State baru untuk tombol hapus
   SearchType _searchType = SearchType.vibes;
@@ -41,7 +41,7 @@ class _SearchFeaturesState extends State<SearchFeatures> {
       }
     });
   }
-  
+
   @override
   void dispose() {
     _controller.dispose();
@@ -83,7 +83,7 @@ class _SearchFeaturesState extends State<SearchFeatures> {
       if (mounted) setState(() => _isLoading = false);
     }
   }
-  
+
   // --- FUNGSI BARU UNTUK MENGHAPUS TEKS ---
   void _clearSearch() {
     _controller.clear();
@@ -114,12 +114,12 @@ class _SearchFeaturesState extends State<SearchFeatures> {
             border: InputBorder.none,
             prefixIcon: const Icon(Icons.search, color: Colors.grey),
             // --- PERUBAHAN DI SINI ---
-            suffixIcon: _showClearButton 
-              ? IconButton(
-                  icon: const Icon(Icons.clear, color: Colors.grey),
-                  onPressed: _clearSearch,
-                )
-              : null, // Tampilkan tombol hanya jika ada teks
+            suffixIcon: _showClearButton
+                ? IconButton(
+                    icon: const Icon(Icons.clear, color: Colors.grey),
+                    onPressed: _clearSearch,
+                  )
+                : null, // Tampilkan tombol hanya jika ada teks
           ),
         ),
       ),
@@ -135,7 +135,8 @@ class _SearchFeaturesState extends State<SearchFeatures> {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+              padding:
+                  const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
               child: CupertinoSlidingSegmentedControl<SearchType>(
                 groupValue: _searchType,
                 backgroundColor: Colors.white.withOpacity(0.5),
@@ -149,8 +150,10 @@ class _SearchFeaturesState extends State<SearchFeatures> {
                   }
                 },
                 children: const {
-                  SearchType.vibes: Padding(padding: EdgeInsets.all(8), child: Text('Vibes')),
-                  SearchType.users: Padding(padding: EdgeInsets.all(8), child: Text('Users')),
+                  SearchType.vibes:
+                      Padding(padding: EdgeInsets.all(8), child: Text('Vibes')),
+                  SearchType.users:
+                      Padding(padding: EdgeInsets.all(8), child: Text('Users')),
                 },
               ),
             ),
@@ -170,39 +173,81 @@ class _SearchFeaturesState extends State<SearchFeatures> {
       return NewsFeedGrid(articles: _newsResults);
     } else {
       if (_controller.text.isEmpty) {
-        return const Center(child: Text("Ketik username untuk mencari...", style: TextStyle(color: Colors.white, fontFamily: 'Poppins')));
+        return const Center(
+          child: Text(
+            "Ketik username untuk mencari...",
+            style: TextStyle(color: Colors.white, fontFamily: 'Poppins'),
+          ),
+        );
       }
-      return ListView.builder(
-        itemCount: _userResults.length,
-        itemBuilder: (context, index) {
-          final userData = _userResults[index].data() as Map<String, dynamic>;
-          final userId = _userResults[index].id;
-          final profileImageUrl = userData['profileImageUrl'];
-          final username = userData['username'] ?? 'No Username';
 
-          return Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.9),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: ListTile(
-              leading: CircleAvatar(
-                backgroundImage: profileImageUrl != null ? NetworkImage(profileImageUrl) : null,
-                child: profileImageUrl == null ? Text(username.isNotEmpty ? username[0].toUpperCase() : 'U') : null,
+      return StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('users')
+            .where('username',
+                isGreaterThanOrEqualTo: _controller.text.toLowerCase())
+            .where('username',
+                isLessThanOrEqualTo: '${_controller.text.toLowerCase()}\uf8ff')
+            .limit(10)
+            .snapshots(), // 🔥 realtime
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(
+              child: Text(
+                "Tidak ada pengguna ditemukan",
+                style: TextStyle(color: Colors.white, fontFamily: 'Poppins'),
               ),
-              title: Text(username, style: const TextStyle(fontFamily: 'Poppins')),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => UserProfilePage(userId: userId)),
-                );
-              },
-            ),
+            );
+          }
+
+          final users = snapshot.data!.docs;
+          return ListView.builder(
+            itemCount: users.length,
+            itemBuilder: (context, index) {
+              final userData = users[index].data() as Map<String, dynamic>;
+              final userId = users[index].id;
+              final profileImageUrl = userData['profileImageUrl'];
+              final username = userData['username'] ?? 'No Username';
+              final nim = userData['nim'] ?? ''; // ✅ NIM realtime
+
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.9),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundImage: profileImageUrl != null
+                        ? NetworkImage(profileImageUrl)
+                        : null,
+                    child: profileImageUrl == null
+                        ? Text(username.isNotEmpty
+                            ? username[0].toUpperCase()
+                            : 'U')
+                        : null,
+                  ),
+                  title: Text(
+                    username,
+                    style: const TextStyle(fontFamily: 'Poppins'),
+                  ),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => UserProfilePage(userId: userId),
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
           );
         },
       );
     }
   }
 }
-

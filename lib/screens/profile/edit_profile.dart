@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider/path_provider.dart';
+import '../../services/firestore_service.dart';
 
 class EditProfilePage extends StatefulWidget {
   final String initialName;
+  final String userId;
   final String initialNim;
   final String initialUsername;
   final String? initialImageUrl;
@@ -11,6 +15,7 @@ class EditProfilePage extends StatefulWidget {
   const EditProfilePage({
     super.key,
     required this.initialName,
+    required this.userId,
     required this.initialNim,
     required this.initialUsername,
     this.initialImageUrl,
@@ -24,8 +29,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
   late TextEditingController _nameController;
   late TextEditingController _nimController;
   late TextEditingController _usernameController;
-  
-  File? _imageFile;
+
+  String? _localImagePath;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -33,28 +39,137 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _nameController = TextEditingController(text: widget.initialName);
     _nimController = TextEditingController(text: widget.initialNim);
     _usernameController = TextEditingController(text: widget.initialUsername);
+    _loadLocalImage();
   }
 
-  Future<void> _pickImage() async {
-    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      setState(() {
-        _imageFile = File(pickedFile.path);
-      });
+  // Load image path from local storage
+  Future<void> _loadLocalImage() async {
+    final prefs = await SharedPreferences.getInstance();
+    final path = prefs.getString('profile_image_${widget.userId}');
+    if (path != null && await File(path).exists()) {
+      setState(() => _localImagePath = path);
     }
   }
 
-  void _saveProfile() {
-    final newName = _nameController.text;
-    final newNim = _nimController.text;
-    final newUsername = _usernameController.text;
+  // Save image path to local storage
+  Future<void> _saveImagePath(String path) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('profile_image_${widget.userId}', path);
+  }
 
-    Navigator.pop(context, {
-      'name': newName,
-      'nim': newNim,
-      'username': newUsername,
-      'imageFile': _imageFile,
-    });
+  Future<void> _pickImage() async {
+    try {
+      final pickedFile = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        print('Image picked: ${pickedFile.path}'); // This log you're seeing
+
+        // THIS IS THE IMPORTANT PART - Copy to permanent directory
+        final directory = await getApplicationDocumentsDirectory();
+        final fileName = 'profile_${widget.userId}.jpg';
+        final localPath = '${directory.path}/$fileName';
+
+        print('Copying to: $localPath'); // Should see this log
+
+        // Copy the picked file to app directory
+        final File localFile = await File(pickedFile.path).copy(localPath);
+
+        print('File copied successfully'); // Should see this log
+
+        await _saveImagePath(localFile.path);
+        setState(() => _localImagePath = localFile.path);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Gambar berhasil dipilih')),
+          );
+        }
+      }
+    } catch (e) {
+      print('Error picking image: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal memilih gambar: $e')),
+        );
+      }
+    }
+  }
+
+  Future<String> _getAppDirectory() async {
+    // Get app's documents directory
+    final directory = Directory.systemTemp.createTempSync('profile_images');
+    return directory.path;
+  }
+
+  void _saveProfile() async {
+    if (_isSaving) return;
+
+    final newName = _nameController.text.trim();
+    final newNim = _nimController.text.trim();
+    final newUsername = _usernameController.text.trim().toLowerCase();
+
+    if (newName.isEmpty || newNim.isEmpty || newUsername.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Semua field harus diisi')),
+      );
+      return;
+    }
+
+    setState(() => _isSaving = true);
+
+    try {
+      // Validate NIM (only if changed)
+      if (newNim != widget.initialNim) {
+        if (await FirestoreService().isNimTaken(newNim)) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('NIM sudah terdaftar')),
+            );
+          }
+          setState(() => _isSaving = false);
+          return;
+        }
+      }
+
+      // Validate username (only if changed)
+      if (newUsername != widget.initialUsername.toLowerCase()) {
+        if (await FirestoreService().isUsernameTaken(newUsername)) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Username sudah dipakai')),
+            );
+          }
+          setState(() => _isSaving = false);
+          return;
+        }
+      }
+
+      // Update Firestore (without image URL)
+      await FirestoreService().updateUserData(widget.userId, {
+        'namaLengkap': newName,
+        'nim': newNim,
+        'username': newUsername,
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profil berhasil diperbarui')),
+        );
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Terjadi kesalahan: $e')),
+        );
+      }
+      setState(() => _isSaving = false);
+    }
   }
 
   @override
@@ -66,25 +181,20 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }
 
   Widget _buildProfileImage() {
-    if (_imageFile != null) {
-      return ClipOval(
-        child: Image.file(_imageFile!, fit: BoxFit.cover, width: 120, height: 120),
-      );
-    } else if (widget.initialImageUrl != null && widget.initialImageUrl!.isNotEmpty) {
-      return ClipOval(
-        child: Image.network(
-          widget.initialImageUrl!,
-          fit: BoxFit.cover,
-          width: 120,
-          height: 120,
-          errorBuilder: (context, error, stackTrace) {
-            return const Icon(Icons.person, size: 60, color: Colors.white);
-          },
-        ),
-      );
-    } else {
-      return const Icon(Icons.camera_alt, size: 40, color: Colors.white);
+    if (_localImagePath != null) {
+      final file = File(_localImagePath!);
+      if (file.existsSync()) {
+        return ClipOval(
+          child: Image.file(
+            file,
+            fit: BoxFit.cover,
+            width: 120,
+            height: 120,
+          ),
+        );
+      }
     }
+    return const Icon(Icons.camera_alt, size: 40, color: Colors.white);
   }
 
   @override
@@ -104,7 +214,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
               ),
             ),
           ),
-
           SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
@@ -113,14 +222,43 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 children: [
                   const SizedBox(height: 50),
                   GestureDetector(
-                    onTap: _pickImage,
-                    child: CircleAvatar(
-                      radius: 60,
-                      backgroundColor: Colors.grey.withOpacity(0.7),
-                      child: _buildProfileImage(),
+                    onTap: _isSaving ? null : _pickImage,
+                    child: Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 60,
+                          backgroundColor: Colors.grey.withOpacity(0.7),
+                          child: _buildProfileImage(),
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: const BoxDecoration(
+                              color: Color.fromARGB(255, 118, 0, 0),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.camera_alt,
+                              size: 20,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Foto hanya tersimpan di perangkat ini',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.black54,
+                      fontFamily: 'Poppins',
+                    ),
+                  ),
+                  const SizedBox(height: 20),
                   Container(
                     padding: const EdgeInsets.all(20),
                     margin: const EdgeInsets.symmetric(horizontal: 10),
@@ -132,24 +270,36 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       children: [
                         _buildTextField(_nameController, 'Nama Lengkap'),
                         const SizedBox(height: 20),
-                        // PERBAIKAN: Menghapus `isEnabled: false` agar NIM bisa diubah
                         _buildTextField(_nimController, 'NIM'),
                         const SizedBox(height: 20),
-                        _buildTextField(_usernameController, 'Username'), 
+                        _buildTextField(_usernameController, 'Username'),
                         const SizedBox(height: 30),
                         ElevatedButton(
-                          onPressed: _saveProfile,
+                          onPressed: _isSaving ? null : _saveProfile,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color.fromARGB(255, 118, 0, 0),
-                            padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
+                            backgroundColor:
+                                const Color.fromARGB(255, 118, 0, 0),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 50, vertical: 15),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(20),
                             ),
                           ),
-                          child: const Text(
-                            'Simpan',
-                            style: TextStyle(color: Colors.white, fontFamily: 'Poppins'),
-                          ),
+                          child: _isSaving
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Text(
+                                  'Simpan',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontFamily: 'Poppins'),
+                                ),
                         ),
                       ],
                     ),
@@ -158,13 +308,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
               ),
             ),
           ),
-
           Positioned(
-            top: 20, 
-            left: 5, 
+            top: 20,
+            left: 5,
             child: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.black, size: 24), 
-              onPressed: () => Navigator.pop(context),
+              icon: const Icon(Icons.arrow_back, color: Colors.black, size: 24),
+              onPressed: _isSaving ? null : () => Navigator.pop(context),
             ),
           ),
         ],
@@ -172,23 +321,41 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String label, {bool isEnabled = true}) {
-    return TextField(
+  Widget _buildTextField(TextEditingController controller, String hint,
+      {bool isEnabled = true}) {
+    return TextFormField(
       controller: controller,
-      enabled: isEnabled,
-      style: TextStyle(color: isEnabled ? Colors.black : Colors.grey[700]),
+      enabled: isEnabled && !_isSaving,
+      style: TextStyle(
+        color: isEnabled ? Colors.black : Colors.grey[700],
+        fontFamily: 'Poppins',
+      ),
       decoration: InputDecoration(
-        labelText: label,
-        labelStyle: TextStyle(color: isEnabled ? Colors.black54 : Colors.grey),
+        hintText: hint,
+        hintStyle: TextStyle(
+          color: Colors.grey[500],
+          fontFamily: 'Poppins',
+        ),
         filled: true,
         fillColor: Colors.white,
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: 14,
+          horizontal: 16,
+        ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide.none,
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.black12, width: 1),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.black26, width: 1),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: Color.fromARGB(255, 118, 0, 0)),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Color.fromARGB(255, 118, 0, 0),
+            width: 2,
+          ),
         ),
       ),
     );
