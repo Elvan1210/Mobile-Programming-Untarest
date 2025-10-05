@@ -15,6 +15,55 @@ class UserPostDetailPage extends StatefulWidget {
 class _UserPostDetailPageState extends State<UserPostDetailPage> {
   final FirestoreService _firestoreService = FirestoreService();
   final TextEditingController _commentController = TextEditingController();
+  bool _isLikeInProgress = false;
+
+  Future<void> _toggleLike() async {
+    if (_isLikeInProgress) return; // Prevent multiple simultaneous requests
+    
+    setState(() => _isLikeInProgress = true);
+    
+    try {
+      await _firestoreService.toggleUserPostLike(widget.postId);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              '❤️ Like berhasil diperbarui!',
+              style: TextStyle(fontFamily: 'Poppins'),
+            ),
+            duration: const Duration(milliseconds: 1200),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Gagal memperbarui like: $e',
+              style: const TextStyle(fontFamily: 'Poppins'),
+            ),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLikeInProgress = false);
+      }
+    }
+  }
 
   void _postComment() {
     if (_commentController.text.trim().isNotEmpty) {
@@ -93,12 +142,21 @@ class _UserPostDetailPageState extends State<UserPostDetailPage> {
                         child: Row(
                           children: [
                             IconButton(
-                              icon: Icon(
-                                isLiked ? Icons.favorite : Icons.favorite_border,
-                                color: isLiked ? Colors.red : Colors.black,
-                                size: 28,
-                              ),
-                              onPressed: () => _firestoreService.toggleUserPostLike(widget.postId),
+                              icon: _isLikeInProgress
+                                  ? const SizedBox(
+                                      width: 28,
+                                      height: 28,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.red,
+                                      ),
+                                    )
+                                  : Icon(
+                                      isLiked ? Icons.favorite : Icons.favorite_border,
+                                      color: isLiked ? Colors.red : Colors.black,
+                                      size: 28,
+                                    ),
+                              onPressed: _isLikeInProgress ? null : _toggleLike,
                             ),
                             IconButton(
                               icon: const Icon(Icons.comment_outlined, size: 28),
