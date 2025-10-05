@@ -1,6 +1,6 @@
 {
-    "name": "untarest_app",
-    "short_name": "untarest_app",
+    "name": "UNTAREST",
+    "short_name": "UNTAREST",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
