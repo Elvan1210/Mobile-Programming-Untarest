@@ -9,11 +9,12 @@ import 'package:untarest_app/services/firestore_service.dart';
 import 'package:untarest_app/utils/constants.dart';
 import 'package:untarest_app/screens/profile/profile.dart';
 import 'package:untarest_app/utils/search_bar.dart';
-
-// --- TAMBAHKAN IMPORT INI ---
 import 'package:untarest_app/screens/home/create_post_page.dart';
 
-// Helper function to check if a URL is a network URL
+// --- TAMBAHKAN IMPORT UNTUK CHAT ---
+import 'package:untarest_app/screens/chat/chat_list_page.dart';
+import 'package:untarest_app/services/chat_service.dart';
+
 bool isNetworkImage(String url) {
   return url.startsWith('http://') || url.startsWith('https://');
 }
@@ -28,12 +29,10 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   int _selectedIndex = 0;
 
-  // --- PERUBAHAN DI SINI ---
-  // Ganti placeholder dengan halaman CreatePostPage yang baru
   late final List<Widget> _widgetOptions = <Widget>[
     const _HomeContent(),
     const SearchFeatures(),
-    const CreatePostPage(), // <-- HALAMAN PLACEHOLDER SUDAH DIGANTI
+    const CreatePostPage(),
     const ProfilePage(),
   ];
 
@@ -108,7 +107,6 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-// (Sisa kode di bawah ini tidak ada perubahan)
 class _HomeContent extends StatefulWidget {
   const _HomeContent();
 
@@ -122,6 +120,7 @@ class _HomeContentState extends State<_HomeContent> {
   List<NewsArticle> allNews = [];
   bool _isLoading = true;
   final FirestoreService _firestoreService = FirestoreService();
+  final ChatService _chatService = ChatService(); // Tambahkan ini
 
   @override
   void initState() {
@@ -213,15 +212,78 @@ class _HomeContentState extends State<_HomeContent> {
               child: Column(
                 children: [
                   const SizedBox(height: 20),
+                  // --- TAMBAHKAN HEADER DENGAN TOMBOL CHAT ---
                   Padding(
-                    padding: const EdgeInsets.only(left: 0, top: 30, bottom: 0),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Image.asset(
-                        "assets/images/logo_UNTAREST.png",
-                        height: 50,
-                        fit: BoxFit.contain,
-                      ),
+                    padding: const EdgeInsets.only(
+                        left: 0, top: 30, bottom: 0, right: 16),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Image.asset(
+                              "assets/images/logo_UNTAREST.png",
+                              height: 50,
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                        ),
+                        // Tombol Chat dengan badge notifikasi
+                        StreamBuilder<int>(
+                          stream: _chatService.getTotalUnreadCount(),
+                          builder: (context, snapshot) {
+                            final unreadCount = snapshot.data ?? 0;
+                            return Stack(
+                              children: [
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.chat_bubble_outline,
+                                    color: Colors.white,
+                                    size: 28,
+                                  ),
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const ChatListPage(),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                if (unreadCount > 0)
+                                  Positioned(
+                                    right: 8,
+                                    top: 8,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: const BoxDecoration(
+                                        color: Colors.red,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      constraints: const BoxConstraints(
+                                        minWidth: 18,
+                                        minHeight: 18,
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          unreadCount > 9
+                                              ? '9+'
+                                              : unreadCount.toString(),
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            );
+                          },
+                        ),
+                      ],
                     ),
                   ),
                   UntarestSearchBar(
